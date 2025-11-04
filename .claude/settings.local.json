@@ -12,7 +12,9 @@
       "Bash(git branch:*)",
       "Bash(git push:*)",
       "Bash(findstr:*)",
-      "Bash(Select-String \"Core\")"
+      "Bash(Select-String \"Core\")",
+      "Bash(Select-String -Pattern \"PlayMaker\")",
+      "Bash(find:*)"
     ],
     "deny": [],
     "ask": []

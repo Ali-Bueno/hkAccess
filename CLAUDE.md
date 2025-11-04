@@ -61,17 +61,34 @@ hkAccess/
 - ✅ **Controller Disconnect Filter:** Completely filters out "connect controller" messages from all announcement systems
 - ✅ **In-Game Dialogue Reading:** Automatically announces NPC dialogues and conversation text using TextMeshPro extraction
 
+### Cutscene Accessibility System
+- ✅ **Real-Time Text Monitoring:** Continuous monitoring of cutscene text elements as they appear
+- ✅ **UIState Detection:** Automatically detects when entering/exiting cutscene mode (`UIState.CUTSCENE`)
+- ✅ **Alpha-Based Visibility:** Announces texts only when they become visible (alpha > 0.1f), respecting animation timing
+- ✅ **Complete Text Capture:** Captures ALL TextMeshPro components in cutscenes:
+  - Main body text (excerpt content)
+  - Title/header text (e.g., "DE «ELEGÍA PARA HALLOWNEST»")
+  - Author attribution (e.g., "POR MONOMON, LA MAESTRA")
+- ✅ **Duplicate Prevention:** HashSet tracking ensures each text is announced only once
+- ✅ **Interrupt Mode:** Uses interrupt flag to prevent text overlap during rapid sequences
+
 ### Technical Implementation
 - **EventSystem Integration:** Tracks currently selected GameObject
 - **Reflection API:** Accesses private fields in game's custom components and SaveStats data
 - **Coroutine Monitoring:** Tracks value changes while UI element is focused
 - **Cleanup System:** Proper disposal of coroutines and event handlers
 - **Harmony Patches:** Intercepts game methods for announcements:
+  - `UIManager.SetState` (Postfix) for cutscene state detection
   - `UIManager` methods for confirmation dialogs and menu navigation
   - `SaveSlotButton.OnSelect` for save slot information
   - `GameManager.SaveGame` for save notifications
   - `DialogueBox.ShowPage` for in-game dialogue announcements
 - **TextMeshPro Integration:** Extracts text from TextMeshPro components with page-based reading
+- **Cutscene Monitoring System:**
+  - Continuous coroutine runs while `UIState == CUTSCENE`
+  - Scans all TextMeshPro components every 0.1 seconds
+  - Tracks visibility via alpha channel
+  - Maintains HashSet of announced texts to prevent duplicates
 
 ---
 
@@ -96,7 +113,7 @@ hkAccess/
 
 ## 🧠 Technical Roadmap
 
-### Phase 1: Menu Accessibility (Completed)
+### Phase 1: Menu & Cutscene Accessibility (Completed)
 - ✅ BepInEx plugin setup with .NET 4.7.2
 - ✅ Tolk screen reader integration via P/Invoke
 - ✅ Menu navigation detection and announcement
@@ -104,6 +121,8 @@ hkAccess/
 - ✅ Value change monitoring with coroutines
 - ✅ Popup and dialog detection
 - ✅ Text formatting and cleanup
+- ✅ Cutscene text monitoring with real-time visibility detection
+- ✅ Complete cutscene text capture (body, title, author)
 
 ### Phase 2: In-Game Accessibility (Next)
 - 🔄 Player position and movement tracking
