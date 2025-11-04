@@ -68,9 +68,23 @@ public static class UIManagerPatches
             if (cleanText.Contains("User Display"))
                 continue;
 
-            // Filtrar nombres técnicos de prompts
-            if (cleanText.Contains("Prompt") || cleanText.Contains("QuitGame") || cleanText.Contains("ReturnMenu"))
+            // Filtrar si el texto contiene SOLO palabras técnicas (sin espacios o con muy pocos caracteres)
+            // Esto atrapa "QuitGamePrompt", "ExitToMenuPrompt", etc.
+            bool looksLikeTechnicalName = !cleanText.Contains(" ") &&
+                                          (cleanText.Contains("Prompt") ||
+                                           cleanText.Contains("Menu") ||
+                                           cleanText.Contains("Screen") ||
+                                           cleanText.Contains("Panel") ||
+                                           cleanText.Contains("Canvas") ||
+                                           cleanText.Contains("QuitGame") ||
+                                           cleanText.Contains("ReturnMenu") ||
+                                           cleanText.Contains("ExitToMenu"));
+
+            if (looksLikeTechnicalName)
+            {
+                Logger.LogInfo($"  Filtering technical name (no spaces): '{cleanText}'");
                 continue;
+            }
 
             bool isButton = text.GetComponentInParent<Button>() != null;
 
@@ -242,6 +256,13 @@ public static class UIManagerPatches
 
             string menuName = menu.gameObject.name;
 
+            // Filtrar prompts - estos se manejan con sus propios patches específicos
+            if (menuName.Contains("Prompt"))
+            {
+                Logger.LogInfo($"Skipping prompt announcement (handled by specific patch): {menuName}");
+                return;
+            }
+
             // Convertir nombres técnicos a nombres amigables
             string friendlyName = menuName switch
             {
@@ -306,5 +327,94 @@ public static class UIManagerPatches
     {
         yield return new WaitForSecondsRealtime(0.3f);
         TolkBridge.Output("Juego guardado", false);
+    }
+
+    // Patch para anunciar diálogos in-game
+    [HarmonyPatch(typeof(DialogueBox), "ShowPage")]
+    [HarmonyPostfix]
+    public static void OnDialogueShowPage(DialogueBox __instance, int pageNum)
+    {
+        try
+        {
+            // Esperar a que el texto se muestre
+            GameManager.instance?.StartCoroutine(AnnounceDialogue(__instance));
+        }
+        catch (System.Exception ex)
+        {
+            Logger.LogError($"Error announcing dialogue: {ex.Message}");
+        }
+    }
+
+    private static IEnumerator AnnounceDialogue(DialogueBox dialogueBox)
+    {
+        // Esperar a que el diálogo termine de animarse
+        yield return new WaitForSecondsRealtime(0.5f);
+
+        try
+        {
+            // Obtener el TextMeshPro usando reflexión
+            var textMeshField = typeof(DialogueBox).GetField("textMesh",
+                System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance);
+
+            if (textMeshField != null)
+            {
+                var textMesh = textMeshField.GetValue(dialogueBox) as TMPro.TextMeshPro;
+                if (textMesh != null)
+                {
+                    // Obtener la página actual
+                    var currentPageField = typeof(DialogueBox).GetField("currentPage",
+                        System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance);
+
+                    if (currentPageField != null)
+                    {
+                        int currentPage = (int)currentPageField.GetValue(dialogueBox);
+
+                        // Obtener el texto de la página actual
+                        string pageText = GetDialoguePageText(textMesh, currentPage);
+
+                        if (!string.IsNullOrEmpty(pageText))
+                        {
+                            Logger.LogInfo($">>> Announcing dialogue: {pageText}");
+                            TolkBridge.Output(pageText, true);
+                        }
+                    }
+                }
+            }
+        }
+        catch (System.Exception ex)
+        {
+            Logger.LogError($"Error in AnnounceDialogue: {ex.Message}");
+        }
+    }
+
+    private static string GetDialoguePageText(TMPro.TextMeshPro textMesh, int pageNum)
+    {
+        if (textMesh == null || textMesh.textInfo == null)
+            return "";
+
+        try
+        {
+            int pageIndex = pageNum - 1;
+            if (pageIndex < 0 || pageIndex >= textMesh.textInfo.pageCount)
+                return "";
+
+            var pageInfo = textMesh.textInfo.pageInfo[pageIndex];
+            int firstCharIndex = pageInfo.firstCharacterIndex;
+            int lastCharIndex = pageInfo.lastCharacterIndex;
+
+            string fullText = textMesh.text;
+            if (firstCharIndex >= 0 && lastCharIndex < fullText.Length && lastCharIndex >= firstCharIndex)
+            {
+                string pageText = fullText.Substring(firstCharIndex, lastCharIndex - firstCharIndex + 1);
+                pageText = pageText.Replace("<br>", " ").Trim();
+                return pageText;
+            }
+        }
+        catch (System.Exception ex)
+        {
+            Logger.LogError($"Error extracting page text: {ex.Message}");
+        }
+
+        return "";
     }
 }

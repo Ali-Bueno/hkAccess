@@ -5,6 +5,11 @@ Develop a full accessibility layer for *Hollow Knight* focused on **audio-based 
 
 **GitHub Repository:** https://github.com/Ali-Bueno/hkAccess
 
+## ⚠️ IMPORTANT DEVELOPMENT NOTES
+- **DO NOT push to GitHub unless explicitly requested by the user**
+- Wait for user confirmation before publishing changes
+- Keep changes local until approval
+
 ---
 
 ## 🧩 Architecture Overview
@@ -53,6 +58,8 @@ hkAccess/
 - ✅ **Save Slot Information:** Announces detailed save slot data (location, completion %, playtime, geo, Steel Soul mode)
 - ✅ **Menu Navigation:** Announces menu names when entering different menus
 - ✅ **Game Save Feedback:** Announces when the game is being saved and when save completes
+- ✅ **Controller Disconnect Filter:** Completely filters out "connect controller" messages from all announcement systems
+- ✅ **In-Game Dialogue Reading:** Automatically announces NPC dialogues and conversation text using TextMeshPro extraction
 
 ### Technical Implementation
 - **EventSystem Integration:** Tracks currently selected GameObject
@@ -63,6 +70,8 @@ hkAccess/
   - `UIManager` methods for confirmation dialogs and menu navigation
   - `SaveSlotButton.OnSelect` for save slot information
   - `GameManager.SaveGame` for save notifications
+  - `DialogueBox.ShowPage` for in-game dialogue announcements
+- **TextMeshPro Integration:** Extracts text from TextMeshPro components with page-based reading
 
 ---
 

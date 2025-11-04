@@ -99,93 +99,10 @@ public class MenuAccessibility : MonoBehaviour
 
     private void CheckForPopups()
     {
-        Canvas[] allCanvases = FindObjectsOfType<Canvas>();
-
-        foreach (var canvas in allCanvases)
-        {
-            if (canvas.enabled && canvas.gameObject.activeInHierarchy)
-            {
-                if (canvas.sortingOrder > 10 && !announcedCanvases.Contains(canvas))
-                {
-                    Logger.LogInfo($"Canvas found: {canvas.gameObject.name}, sortOrder: {canvas.sortingOrder}");
-                }
-
-                if (canvas.sortingOrder >= 200 && !announcedCanvases.Contains(canvas))
-                {
-                    // Filtrar el ConnectControllerPanel por nombre
-                    if (canvas.gameObject.name.ToLower().Contains("connect") &&
-                        canvas.gameObject.name.ToLower().Contains("controller"))
-                    {
-                        Logger.LogInfo($"Skipping ConnectControllerPanel: {canvas.gameObject.name}");
-                        continue;
-                    }
-
-                    Text[] texts = canvas.GetComponentsInChildren<Text>(true);
-                    List<string> popupMessages = new List<string>();
-                    List<string> buttonTexts = new List<string>();
-
-                    Logger.LogInfo($"Checking Canvas '{canvas.gameObject.name}' with sortOrder {canvas.sortingOrder}");
-
-                    foreach (var text in texts)
-                    {
-                        if (string.IsNullOrEmpty(text.text) || !text.gameObject.activeInHierarchy)
-                            continue;
-
-                        string cleanText = text.text.Trim();
-                        bool isButton = text.GetComponentInParent<Button>() != null;
-
-                        Logger.LogInfo($"  Text found: '{cleanText}' (isButton: {isButton}, active: {text.gameObject.activeInHierarchy})");
-
-                        // Filtrar textos que no queremos anunciar
-                        if (cleanText.Contains("User Display"))
-                            continue;
-
-                        // Filtrar mensaje de conectar mando
-                        if (cleanText.Contains("Conecta") || cleanText.ToLower().Contains("connect"))
-                            continue;
-
-                        if (isButton)
-                        {
-                            // Recoger textos de botones para anunciarlos después
-                            buttonTexts.Add(cleanText);
-                        }
-                        else
-                        {
-                            // Mensaje principal del popup
-                            popupMessages.Add(cleanText);
-                        }
-                    }
-
-                    if (popupMessages.Count > 0 || buttonTexts.Count > 0)
-                    {
-                        announcedCanvases.Add(canvas);
-
-                        // Construir anuncio: primero el mensaje, luego las opciones
-                        List<string> fullAnnouncement = new List<string>();
-
-                        if (popupMessages.Count > 0)
-                        {
-                            fullAnnouncement.Add(string.Join(". ", popupMessages));
-                        }
-
-                        if (buttonTexts.Count > 0)
-                        {
-                            fullAnnouncement.Add("Opciones: " + string.Join(", ", buttonTexts));
-                        }
-
-                        string announcement = string.Join(". ", fullAnnouncement);
-                        Logger.LogInfo($">>> Announcing popup: {announcement}");
-                        TolkBridge.Output(announcement, true);
-                    }
-                    else
-                    {
-                        Logger.LogInfo($"No content found in this canvas");
-                    }
-                }
-            }
-        }
-
-        announcedCanvases.RemoveAll(c => c == null || !c.gameObject.activeInHierarchy);
+        // DESACTIVADO: Los popups ahora se manejan mediante Harmony patches en UIManagerPatches
+        // Esta función causaba duplicación y anunciaba nombres técnicos de GameObjects
+        // Ver: UIManagerPatches.OnShowQuitGamePrompt, OnShowReturnMenuPrompt, OnShowResolutionPrompt
+        return;
     }
 
 
@@ -204,7 +121,9 @@ public class MenuAccessibility : MonoBehaviour
                 text.GetComponentInParent<Button>() == null &&
                 !text.text.Contains("User Display") &&
                 !text.text.Contains("1.5.") &&
-                !text.text.Contains("\n"))
+                !text.text.Contains("\n") &&
+                !text.text.Contains("Conecta") &&
+                !text.text.ToLower().Contains("connect"))
             {
                 string cleanText = text.text.Trim();
                 if (cleanText.Length > 0 && cleanText.Length < 50)
@@ -218,6 +137,14 @@ public class MenuAccessibility : MonoBehaviour
         if (titleText != null)
         {
             string announcement = titleText.text.Trim();
+
+            // Doble verificación para filtrar mensajes de mando
+            if (announcement.Contains("Conecta") || announcement.ToLower().Contains("connect"))
+            {
+                Logger.LogInfo($"Filtered controller message: {announcement}");
+                return;
+            }
+
             Logger.LogInfo($"Menu title: {announcement}");
             TolkBridge.Output(announcement, true);
         }
@@ -301,6 +228,11 @@ public class MenuAccessibility : MonoBehaviour
                         // Collect additional descriptive texts (not buttons, not the option value itself)
                         // Clean up newlines and extra whitespace
                         string cleanText = textComp.text.Replace("\n", " ").Replace("\r", " ").Trim();
+
+                        // Filtrar mensajes de mando
+                        if (cleanText.Contains("Conecta") || cleanText.ToLower().Contains("connect"))
+                            continue;
+
                         // Remove multiple spaces
                         while (cleanText.Contains("  "))
                         {
@@ -434,6 +366,14 @@ public class MenuAccessibility : MonoBehaviour
         }
 
         string text = GetUIElementText(uiObject);
+
+        // Si el texto está vacío después de filtrar, no anunciar nada
+        if (string.IsNullOrEmpty(text))
+        {
+            Logger.LogInfo($"Empty text after filtering for object: {uiObject.name}");
+            return "";
+        }
+
         var button = uiObject.GetComponent<Button>();
         if (button != null)
         {
@@ -582,12 +522,20 @@ public class MenuAccessibility : MonoBehaviour
         var text = uiObject.GetComponent<Text>();
         if (text != null && !string.IsNullOrEmpty(text.text))
         {
+            // Filtrar textos no deseados
+            if (text.text.Contains("Conecta") || text.text.ToLower().Contains("connect"))
+                return GetCleanObjectName(uiObject.name);
+
             return text.text;
         }
 
         text = uiObject.GetComponentInChildren<Text>();
         if (text != null && !string.IsNullOrEmpty(text.text))
         {
+            // Filtrar textos no deseados
+            if (text.text.Contains("Conecta") || text.text.ToLower().Contains("connect"))
+                return GetCleanObjectName(uiObject.name);
+
             return text.text;
         }
 
@@ -596,10 +544,53 @@ public class MenuAccessibility : MonoBehaviour
             text = uiObject.transform.parent.GetComponentInChildren<Text>();
             if (text != null && !string.IsNullOrEmpty(text.text))
             {
+                // Filtrar textos no deseados
+                if (text.text.Contains("Conecta") || text.text.ToLower().Contains("connect"))
+                    return GetCleanObjectName(uiObject.name);
+
                 return text.text;
             }
         }
 
-        return uiObject.name;
+        return GetCleanObjectName(uiObject.name);
+    }
+
+    private string GetCleanObjectName(string objectName)
+    {
+        // Filtrar nombres técnicos de GameObjects que no deberían anunciarse
+        if (string.IsNullOrEmpty(objectName))
+            return "";
+
+        // Lista de palabras que indican un nombre técnico que no queremos anunciar
+        string[] technicalKeywords = new string[]
+        {
+            "Prompt",
+            "QuitGame",
+            "ReturnMenu",
+            "ExitToMenu",
+            "Resolution",
+            "Canvas",
+            "Panel",
+            "Container",
+            "Holder"
+        };
+
+        foreach (string keyword in technicalKeywords)
+        {
+            if (objectName.Contains(keyword))
+            {
+                Logger.LogInfo($"Filtered technical GameObject name: {objectName}");
+                return ""; // Devolver vacío en lugar del nombre técnico
+            }
+        }
+
+        // Si el nombre termina en "Menu" o "Screen", también filtrarlo
+        if (objectName.EndsWith("Menu") || objectName.EndsWith("Screen"))
+        {
+            Logger.LogInfo($"Filtered technical GameObject name (ends with Menu/Screen): {objectName}");
+            return "";
+        }
+
+        return objectName;
     }
 }
