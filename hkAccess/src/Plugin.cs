@@ -2,6 +2,7 @@
 using BepInEx;
 using BepInEx.Logging;
 using System.Runtime.InteropServices;
+using HarmonyLib;
 
 namespace HKAccessibility;
 
@@ -10,6 +11,7 @@ public class Plugin : BaseUnityPlugin
 {
     internal static new ManualLogSource Logger;
     private MenuAccessibility menuAccessibility;
+    private Harmony harmony;
 
     private void Awake()
     {
@@ -38,8 +40,23 @@ public class Plugin : BaseUnityPlugin
             Logger.LogError($"Failed to initialize screen reader: {ex.Message}");
         }
 
+        ApplyHarmonyPatches();
         InitializeMenuAccessibility();
         Logger.LogInfo("Audio navigation and screen reader support initialized.");
+    }
+
+    private void ApplyHarmonyPatches()
+    {
+        try
+        {
+            harmony = new Harmony(MyPluginInfo.PLUGIN_GUID);
+            harmony.PatchAll();
+            Logger.LogInfo("Harmony patches applied successfully.");
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError($"Failed to apply Harmony patches: {ex.Message}");
+        }
     }
 
     private void InitializeMenuAccessibility()
@@ -57,6 +74,16 @@ public class Plugin : BaseUnityPlugin
 
     private void OnDestroy()
     {
+        try
+        {
+            harmony?.UnpatchSelf();
+            Logger.LogInfo("Harmony patches removed.");
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError($"Error removing Harmony patches: {ex.Message}");
+        }
+
         try
         {
             TolkBridge.Output("Hollow Knight Accessibility Mod unloaded.");

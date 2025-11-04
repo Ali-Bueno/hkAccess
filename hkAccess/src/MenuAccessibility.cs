@@ -26,7 +26,7 @@ public class MenuAccessibility : MonoBehaviour
 
     private void Start()
     {
-        SceneManager.activeSceneChanged += OnSceneChanged;
+        UnityEngine.SceneManagement.SceneManager.activeSceneChanged += OnSceneChanged;
     }
 
     private void OnDestroy()
@@ -38,7 +38,7 @@ public class MenuAccessibility : MonoBehaviour
     {
         Logger.LogInfo("MenuAccessibility: Starting cleanup...");
 
-        SceneManager.activeSceneChanged -= OnSceneChanged;
+        UnityEngine.SceneManagement.SceneManager.activeSceneChanged -= OnSceneChanged;
 
         StopAllCoroutines();
 
@@ -112,37 +112,74 @@ public class MenuAccessibility : MonoBehaviour
 
                 if (canvas.sortingOrder >= 200 && !announcedCanvases.Contains(canvas))
                 {
+                    // Filtrar el ConnectControllerPanel por nombre
+                    if (canvas.gameObject.name.ToLower().Contains("connect") &&
+                        canvas.gameObject.name.ToLower().Contains("controller"))
+                    {
+                        Logger.LogInfo($"Skipping ConnectControllerPanel: {canvas.gameObject.name}");
+                        continue;
+                    }
+
                     Text[] texts = canvas.GetComponentsInChildren<Text>(true);
-                    List<string> nonButtonTexts = new List<string>();
+                    List<string> popupMessages = new List<string>();
+                    List<string> buttonTexts = new List<string>();
 
                     Logger.LogInfo($"Checking Canvas '{canvas.gameObject.name}' with sortOrder {canvas.sortingOrder}");
 
                     foreach (var text in texts)
                     {
-                        bool isButton = text.GetComponentInParent<Button>() != null;
-                        Logger.LogInfo($"  Text found: '{text.text}' (isButton: {isButton}, active: {text.gameObject.activeInHierarchy})");
+                        if (string.IsNullOrEmpty(text.text) || !text.gameObject.activeInHierarchy)
+                            continue;
 
-                        if (!string.IsNullOrEmpty(text.text) &&
-                            text.gameObject.activeInHierarchy &&
-                            !isButton &&
-                            !text.text.Contains("User Display") &&
-                            !text.text.Contains("Conecta") &&
-                            !text.text.ToLower().Contains("connect"))
+                        string cleanText = text.text.Trim();
+                        bool isButton = text.GetComponentInParent<Button>() != null;
+
+                        Logger.LogInfo($"  Text found: '{cleanText}' (isButton: {isButton}, active: {text.gameObject.activeInHierarchy})");
+
+                        // Filtrar textos que no queremos anunciar
+                        if (cleanText.Contains("User Display"))
+                            continue;
+
+                        // Filtrar mensaje de conectar mando
+                        if (cleanText.Contains("Conecta") || cleanText.ToLower().Contains("connect"))
+                            continue;
+
+                        if (isButton)
                         {
-                            nonButtonTexts.Add(text.text.Trim());
+                            // Recoger textos de botones para anunciarlos después
+                            buttonTexts.Add(cleanText);
+                        }
+                        else
+                        {
+                            // Mensaje principal del popup
+                            popupMessages.Add(cleanText);
                         }
                     }
 
-                    if (nonButtonTexts.Count > 0)
+                    if (popupMessages.Count > 0 || buttonTexts.Count > 0)
                     {
                         announcedCanvases.Add(canvas);
-                        string popupText = string.Join(". ", nonButtonTexts);
-                        Logger.LogInfo($">>> Announcing popup: {popupText}");
-                        TolkBridge.Output(popupText, true);
+
+                        // Construir anuncio: primero el mensaje, luego las opciones
+                        List<string> fullAnnouncement = new List<string>();
+
+                        if (popupMessages.Count > 0)
+                        {
+                            fullAnnouncement.Add(string.Join(". ", popupMessages));
+                        }
+
+                        if (buttonTexts.Count > 0)
+                        {
+                            fullAnnouncement.Add("Opciones: " + string.Join(", ", buttonTexts));
+                        }
+
+                        string announcement = string.Join(". ", fullAnnouncement);
+                        Logger.LogInfo($">>> Announcing popup: {announcement}");
+                        TolkBridge.Output(announcement, true);
                     }
                     else
                     {
-                        Logger.LogInfo($"No non-button texts found in this canvas");
+                        Logger.LogInfo($"No content found in this canvas");
                     }
                 }
             }

@@ -56,6 +56,7 @@ hkAccess/
 - **Reflection API:** Accesses private fields in game's custom components
 - **Coroutine Monitoring:** Tracks value changes while UI element is focused
 - **Cleanup System:** Proper disposal of coroutines and event handlers
+- **Harmony Patches:** Intercepts UIManager methods to announce confirmation dialogs
 
 ---
 
@@ -148,4 +149,44 @@ git push -u origin main
 - Tolk DLLs must be in game root directory (not plugins folder)
 - Unity DLL references point to local Hollow Knight installation
 - Screen reader must be running before launching game
+
+## 🐛 Known Issues
+
+### Confirmation Popups Not Being Announced
+**Status:** ❌ Under investigation
+
+**Findings from decompiled code:**
+- `UIManager.cs` handles all menu prompts through `MenuScreen` objects:
+  - `quitGamePrompt` (UIManager.cs:212) - Quit game confirmation
+  - `returnMainMenuPrompt` (UIManager.cs:214) - Return to main menu confirmation
+  - `resolutionPrompt` (UIManager.cs:216) - Resolution change confirmation
+- Prompts are shown via coroutines: `GoToQuitGamePrompt()`, `GoToReturnMenuPrompt()`, `GoToResolutionPrompt()`
+- The `activePrompt` field (UIManager.cs:232) tracks which prompt is currently displayed
+- `MenuScreen` class contains title, content, controls as CanvasGroups
+
+**Connect Controller Panel:**
+- `ConnectControllerPanel.cs` controls visibility based on `Platform.Current.IsPausingOnControllerDisconnected`
+- Uses a `CanvasGroup` with fadeRate to show/hide
+- No special sortingOrder, just alpha fade
+
+**Current mod approach:**
+- Only uses `MenuAccessibility.cs` component attached to Plugin
+- No Harmony patches to hook into game methods
+- Relies on Unity EventSystem to detect selected GameObjects
+- Detects popups by Canvas sortingOrder >= 200
+
+**Solution implemented:**
+✅ **Using Harmony patches** to intercept UIManager methods:
+- Created `UIManagerPatches.cs` with patches for:
+  - `UIShowQuitGamePrompt()` - Intercepts quit game confirmation
+  - `UIShowReturnMenuPrompt()` - Intercepts return to menu confirmation
+  - `UIShowResolutionPrompt()` - Intercepts resolution change confirmation
+- Each patch waits 0.5s for the popup to appear, then reads all text and announces it
+- Announces both the question and available button options
+- Added `Assembly-CSharp.dll` reference to .csproj to access game classes
+
+### "Connect Controller" Text Still Showing
+**Status:** ✅ Fixed
+- Added explicit filter in `CheckForPopups()` to skip canvases with "connect" and "controller" in their name
+- Simplified text filtering to exclude any text containing "Conecta" or "connect"
 
