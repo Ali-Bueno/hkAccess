@@ -12,6 +12,61 @@ Develop a full accessibility layer for *Hollow Knight* focused on **audio-based 
 
 ---
 
+## 🎯 Development Methodology
+
+### Code-First Approach
+**ALWAYS analyze the decompiled game code before implementing any accessibility feature.**
+
+#### Mandatory Process:
+1. **Research First** - When implementing any new accessibility feature:
+   - Search through `hk code/` directory for relevant game classes and methods
+   - Study how the game implements the functionality you want to make accessible
+   - Identify the exact methods, properties, and state changes involved
+
+2. **Harmony Patching** - Use Harmony to intercept game methods:
+   - Prefer patching existing game methods over generic Unity component monitoring
+   - Use `[HarmonyPatch]` attributes to target specific game classes and methods
+   - Choose appropriate patch types (Prefix/Postfix) based on needs
+
+3. **Never Guess or Invent** - Do NOT implement generic solutions without understanding the game code:
+   - ❌ BAD: Generic `Text.text` setter patches that catch everything
+   - ✅ GOOD: Specific patches on `DialogueBox.ShowPage` after analyzing the code
+   - ❌ BAD: Monitoring all GameObject activations hoping to catch something
+   - ✅ GOOD: Patching `UIManager.SetState` after finding it controls cutscenes
+
+4. **Iterative Analysis** - If a feature isn't working:
+   - Go back to the decompiled code
+   - Search for related classes, methods, enums, and state managers
+   - Ask user to review logs and provide feedback
+   - Refine patches based on actual game behavior
+
+#### Examples of Correct Methodology:
+
+**Cutscene Text (CORRECT):**
+1. Searched `hk code/` for "cutscene", "opening", "excerpt"
+2. Found `OpeningSequence.cs` uses `UIState.CUTSCENE`
+3. Found `ChangeFontByLanguage.cs` reveals `ExcerptAuthor` font type exists
+4. Implemented patch on `UIManager.SetState` to detect cutscene mode
+5. Monitored TextMeshPro components with alpha-based visibility
+
+**Save Slot Info (CORRECT):**
+1. Analyzed `SaveSlotButton.cs` to understand `PresentSaveSlot` method
+2. Found private `saveStats` field contains all information
+3. Patched `OnSelect` method and used reflection to access `saveStats`
+4. Announced location, completion %, playtime, geo, Steel Soul mode
+
+**What NOT to Do (INCORRECT):**
+- Creating generic text monitoring without knowing what components the game uses
+- Assuming Unity standard components when game uses custom systems
+- Implementing features without checking if game already has the infrastructure
+
+### Available Resources:
+- **Decompiled Code:** `D:\code\unity and such\hk access\hk code\`
+- **Game Assemblies:** `D:\games\steam\steamapps\common\Hollow Knight\hollow_knight_Data\Managed\`
+- **Tools:** Use Grep, Task, or Explore agents to search game code efficiently
+
+---
+
 ## 🧩 Architecture Overview
 - **Engine:** Unity (Mono backend)
 - **Mod Loader:** [BepInEx 5](https://github.com/BepInEx/BepInEx) (Mono) — used to inject custom C# assemblies
