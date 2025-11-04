@@ -18,23 +18,32 @@ Develop a full accessibility layer for *Hollow Knight* focused on **audio-based 
 **ALWAYS analyze the decompiled game code before implementing any accessibility feature.**
 
 #### Mandatory Process:
-1. **Research First** - When implementing any new accessibility feature:
+1. **Check Existing Code First** - BEFORE implementing any new feature:
+   - Review existing patches in `UIManagerPatches.cs`, `MenuAccessibility.cs`, and `Plugin.cs`
+   - Look for similar patterns, helper methods, or existing approaches
+   - Reuse existing helper functions (e.g., `GetGameObjectPath`, text filtering logic)
+   - Ensure consistency with existing code style and patterns
+   - **Never duplicate code or implement worse versions of existing solutions**
+
+2. **Research Game Code** - When implementing any new accessibility feature:
    - Search through `hk code/` directory for relevant game classes and methods
    - Study how the game implements the functionality you want to make accessible
    - Identify the exact methods, properties, and state changes involved
 
-2. **Harmony Patching** - Use Harmony to intercept game methods:
+3. **Harmony Patching** - Use Harmony to intercept game methods:
    - Prefer patching existing game methods over generic Unity component monitoring
    - Use `[HarmonyPatch]` attributes to target specific game classes and methods
    - Choose appropriate patch types (Prefix/Postfix) based on needs
 
-3. **Never Guess or Invent** - Do NOT implement generic solutions without understanding the game code:
+4. **Never Guess or Invent** - Do NOT implement generic solutions without understanding the game code:
    - ❌ BAD: Generic `Text.text` setter patches that catch everything
    - ✅ GOOD: Specific patches on `DialogueBox.ShowPage` after analyzing the code
    - ❌ BAD: Monitoring all GameObject activations hoping to catch something
    - ✅ GOOD: Patching `UIManager.SetState` after finding it controls cutscenes
+   - ❌ BAD: Duplicating existing text filtering logic in multiple places
+   - ✅ GOOD: Reusing existing helper methods and patterns
 
-4. **Iterative Analysis** - If a feature isn't working:
+5. **Iterative Analysis** - If a feature isn't working:
    - Go back to the decompiled code
    - Search for related classes, methods, enums, and state managers
    - Ask user to review logs and provide feedback
@@ -43,27 +52,39 @@ Develop a full accessibility layer for *Hollow Knight* focused on **audio-based 
 #### Examples of Correct Methodology:
 
 **Cutscene Text (CORRECT):**
-1. Searched `hk code/` for "cutscene", "opening", "excerpt"
-2. Found `OpeningSequence.cs` uses `UIState.CUTSCENE`
-3. Found `ChangeFontByLanguage.cs` reveals `ExcerptAuthor` font type exists
-4. Implemented patch on `UIManager.SetState` to detect cutscene mode
-5. Monitored TextMeshPro components with alpha-based visibility
+1. **Checked existing code** - Saw we already had `GetGameObjectPath` helper and TextMeshPro monitoring patterns
+2. **Searched game code** - Found `OpeningSequence.cs` uses `UIState.CUTSCENE`
+3. **Analyzed further** - Found `ChangeFontByLanguage.cs` reveals `ExcerptAuthor` font type exists
+4. **Implemented patch** - Patched `UIManager.SetState` to detect cutscene mode
+5. **Reused patterns** - Used existing alpha-based visibility monitoring approach from dialogue system
 
 **Save Slot Info (CORRECT):**
-1. Analyzed `SaveSlotButton.cs` to understand `PresentSaveSlot` method
-2. Found private `saveStats` field contains all information
-3. Patched `OnSelect` method and used reflection to access `saveStats`
-4. Announced location, completion %, playtime, geo, Steel Soul mode
+1. **Checked existing code** - Saw we had reflection patterns for accessing private fields
+2. **Analyzed game code** - Studied `SaveSlotButton.cs` and `PresentSaveSlot` method
+3. **Found data source** - Located private `saveStats` field contains all information
+4. **Implemented patch** - Patched `OnSelect` method and used reflection pattern
+5. **Announced consistently** - Used same announcement format as other UI elements
 
 **What NOT to Do (INCORRECT):**
-- Creating generic text monitoring without knowing what components the game uses
-- Assuming Unity standard components when game uses custom systems
-- Implementing features without checking if game already has the infrastructure
+- ❌ Creating generic text monitoring without knowing what components the game uses
+- ❌ Assuming Unity standard components when game uses custom systems
+- ❌ Implementing features without checking if game already has the infrastructure
+- ❌ **Duplicating existing code instead of reviewing what's already implemented**
+- ❌ **Implementing new patterns when similar working patterns already exist**
+- ❌ **Creating new helper methods when similar ones already exist**
 
 ### Available Resources:
+- **Our Mod Code:** Review `UIManagerPatches.cs`, `MenuAccessibility.cs`, `Plugin.cs` for existing patterns
 - **Decompiled Code:** `D:\code\unity and such\hk access\hk code\`
 - **Game Assemblies:** `D:\games\steam\steamapps\common\Hollow Knight\hollow_knight_Data\Managed\`
-- **Tools:** Use Grep, Task, or Explore agents to search game code efficiently
+- **Tools:** Use Grep, Task, or Explore agents to search both our code and game code efficiently
+
+### Code Review Checklist Before Implementation:
+- [ ] Have I reviewed existing mod code for similar functionality?
+- [ ] Can I reuse any existing helper methods or patterns?
+- [ ] Have I searched the decompiled game code for relevant classes?
+- [ ] Am I using Harmony patches on specific game methods (not generic Unity monitoring)?
+- [ ] Is this implementation consistent with our existing code style?
 
 ---
 
