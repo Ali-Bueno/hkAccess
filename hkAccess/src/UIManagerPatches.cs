@@ -68,15 +68,19 @@ public static class UIManagerPatches
             if (cleanText.Contains("User Display"))
                 continue;
 
+            // Filtrar nombres técnicos de prompts
+            if (cleanText.Contains("Prompt") || cleanText.Contains("QuitGame") || cleanText.Contains("ReturnMenu"))
+                continue;
+
             bool isButton = text.GetComponentInParent<Button>() != null;
 
-            Logger.LogInfo($"  Found text: '{cleanText}' (isButton: {isButton})");
+            // También verificar si es un Selectable (incluye botones y otros controles)
+            bool isSelectable = text.GetComponentInParent<UnityEngine.UI.Selectable>() != null;
 
-            if (isButton)
-            {
-                buttonTexts.Add(cleanText);
-            }
-            else
+            Logger.LogInfo($"  Found text: '{cleanText}' (isButton: {isButton}, isSelectable: {isSelectable})");
+
+            // SOLO agregar textos que NO sean botones ni otros elementos seleccionables
+            if (!isButton && !isSelectable)
             {
                 // Solo agregar si no está duplicado
                 if (!promptMessages.Contains(cleanText))
@@ -106,95 +110,124 @@ public static class UIManagerPatches
     {
         try
         {
-            Logger.LogInfo($"SaveSlotButton selected: {__instance.saveSlot}");
+            Logger.LogInfo($"SaveSlotButton selected: {__instance.saveSlot}, state: {__instance.saveFileState}");
 
-            // Obtener el estado del slot
-            var saveFileState = __instance.saveFileState;
-            var slotNumber = __instance.saveSlot switch
-            {
-                UnityEngine.UI.SaveSlotButton.SaveSlot.SLOT_1 => 1,
-                UnityEngine.UI.SaveSlotButton.SaveSlot.SLOT_2 => 2,
-                UnityEngine.UI.SaveSlotButton.SaveSlot.SLOT_3 => 3,
-                UnityEngine.UI.SaveSlotButton.SaveSlot.SLOT_4 => 4,
-                _ => 0
-            };
-
-            string announcement = $"Slot {slotNumber}";
-
-            // Según el estado del archivo de guardado
-            switch (saveFileState)
-            {
-                case UnityEngine.UI.SaveSlotButton.SaveFileStates.Empty:
-                    announcement += ". Nuevo juego";
-                    break;
-
-                case UnityEngine.UI.SaveSlotButton.SaveFileStates.Corrupted:
-                    announcement += ". Archivo corrupto";
-                    break;
-
-                case UnityEngine.UI.SaveSlotButton.SaveFileStates.LoadedStats:
-                    // Obtener la información del guardado usando reflexión
-                    var saveStatsField = typeof(UnityEngine.UI.SaveSlotButton).GetField("saveStats",
-                        System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance);
-
-                    if (saveStatsField != null)
-                    {
-                        var saveStats = saveStatsField.GetValue(__instance) as SaveStats;
-
-                        if (saveStats != null)
-                        {
-                            announcement += ". Partida guardada";
-
-                            // Obtener la ubicación
-                            if (__instance.locationText != null && !string.IsNullOrEmpty(__instance.locationText.text))
-                            {
-                                string location = __instance.locationText.text.Replace("\n", " ").Replace("\r", " ").Trim();
-                                announcement += $". {location}";
-                            }
-
-                            // Obtener porcentaje de completado
-                            if (__instance.completionText != null && !string.IsNullOrEmpty(__instance.completionText.text))
-                            {
-                                announcement += $". {__instance.completionText.text} completado";
-                            }
-
-                            // Obtener tiempo de juego
-                            if (__instance.playTimeText != null && !string.IsNullOrEmpty(__instance.playTimeText.text))
-                            {
-                                announcement += $". {__instance.playTimeText.text}";
-                            }
-
-                            // Obtener geo
-                            if (__instance.geoText != null && !string.IsNullOrEmpty(__instance.geoText.text) && __instance.geoIcon.enabled)
-                            {
-                                announcement += $". {__instance.geoText.text} Geo";
-                            }
-
-                            // Detectar modo Steel Soul
-                            if (saveStats.permadeathMode == 1)
-                            {
-                                announcement += ". Modo Steel Soul";
-                            }
-                            else if (saveStats.permadeathMode == 2)
-                            {
-                                announcement = $"Slot {slotNumber}. Steel Soul derrotado";
-                            }
-                        }
-                    }
-                    break;
-
-                case UnityEngine.UI.SaveSlotButton.SaveFileStates.OperationInProgress:
-                    announcement += ". Cargando";
-                    break;
-            }
-
-            Logger.LogInfo($">>> Announcing save slot: {announcement}");
-            TolkBridge.Output(announcement, true);
+            // Iniciar coroutine para anunciar con delay (para evitar conflicto con MenuAccessibility)
+            GameManager.instance?.StartCoroutine(AnnounceSaveSlotDelayed(__instance));
         }
         catch (System.Exception ex)
         {
             Logger.LogError($"Error announcing save slot: {ex.Message}");
         }
+    }
+
+    private static IEnumerator AnnounceSaveSlotDelayed(UnityEngine.UI.SaveSlotButton saveSlotButton)
+    {
+        // Esperar un poco para que MenuAccessibility no interfiera
+        yield return new WaitForSecondsRealtime(0.15f);
+
+        // Obtener el estado del slot
+        var saveFileState = saveSlotButton.saveFileState;
+        var slotNumber = saveSlotButton.saveSlot switch
+        {
+            UnityEngine.UI.SaveSlotButton.SaveSlot.SLOT_1 => 1,
+            UnityEngine.UI.SaveSlotButton.SaveSlot.SLOT_2 => 2,
+            UnityEngine.UI.SaveSlotButton.SaveSlot.SLOT_3 => 3,
+            UnityEngine.UI.SaveSlotButton.SaveSlot.SLOT_4 => 4,
+            _ => 0
+        };
+
+        string announcement = $"Slot {slotNumber}";
+
+        Logger.LogInfo($"Processing save slot announcement, state: {saveFileState}");
+
+        // Según el estado del archivo de guardado
+        switch (saveFileState)
+        {
+            case UnityEngine.UI.SaveSlotButton.SaveFileStates.Empty:
+                announcement += ". Nuevo juego";
+                break;
+
+            case UnityEngine.UI.SaveSlotButton.SaveFileStates.Corrupted:
+                announcement += ". Archivo corrupto";
+                break;
+
+            case UnityEngine.UI.SaveSlotButton.SaveFileStates.LoadedStats:
+                // Obtener la información del guardado usando reflexión
+                var saveStatsField = typeof(UnityEngine.UI.SaveSlotButton).GetField("saveStats",
+                    System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance);
+
+                if (saveStatsField != null)
+                {
+                    var saveStats = saveStatsField.GetValue(saveSlotButton) as SaveStats;
+                    Logger.LogInfo($"SaveStats retrieved: {(saveStats != null ? "found" : "null")}");
+
+                    if (saveStats != null)
+                    {
+                        announcement += ". Partida guardada";
+
+                        // Obtener la ubicación
+                        if (saveSlotButton.locationText != null && !string.IsNullOrEmpty(saveSlotButton.locationText.text))
+                        {
+                            string location = saveSlotButton.locationText.text.Replace("\n", " ").Replace("\r", " ").Trim();
+                            announcement += $". {location}";
+                            Logger.LogInfo($"Location: {location}");
+                        }
+
+                        // Obtener porcentaje de completado
+                        if (saveSlotButton.completionText != null && !string.IsNullOrEmpty(saveSlotButton.completionText.text))
+                        {
+                            announcement += $". {saveSlotButton.completionText.text} completado";
+                            Logger.LogInfo($"Completion: {saveSlotButton.completionText.text}");
+                        }
+
+                        // Obtener tiempo de juego
+                        if (saveSlotButton.playTimeText != null && !string.IsNullOrEmpty(saveSlotButton.playTimeText.text))
+                        {
+                            announcement += $". {saveSlotButton.playTimeText.text}";
+                            Logger.LogInfo($"Playtime: {saveSlotButton.playTimeText.text}");
+                        }
+
+                        // Obtener geo
+                        if (saveSlotButton.geoText != null && !string.IsNullOrEmpty(saveSlotButton.geoText.text) && saveSlotButton.geoIcon.enabled)
+                        {
+                            announcement += $". {saveSlotButton.geoText.text} Geo";
+                            Logger.LogInfo($"Geo: {saveSlotButton.geoText.text}");
+                        }
+
+                        // Detectar modo Steel Soul
+                        if (saveStats.permadeathMode == 1)
+                        {
+                            announcement += ". Modo Steel Soul";
+                        }
+                        else if (saveStats.permadeathMode == 2)
+                        {
+                            announcement = $"Slot {slotNumber}. Steel Soul derrotado";
+                        }
+                    }
+                    else
+                    {
+                        Logger.LogWarning("SaveStats was null");
+                    }
+                }
+                else
+                {
+                    Logger.LogWarning("saveStats field not found via reflection");
+                }
+                break;
+
+            case UnityEngine.UI.SaveSlotButton.SaveFileStates.OperationInProgress:
+                announcement += ". Cargando";
+                break;
+
+            case UnityEngine.UI.SaveSlotButton.SaveFileStates.NotStarted:
+                // No anunciar nada si aún no ha empezado a cargar
+                Logger.LogInfo("Slot not started yet, skipping announcement");
+                yield break;
+        }
+
+        Logger.LogInfo($">>> Announcing save slot: {announcement}");
+        TolkBridge.Output(announcement, true);
     }
 
     // Patch para anunciar cuando entras a un menú
