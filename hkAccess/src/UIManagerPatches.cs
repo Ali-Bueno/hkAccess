@@ -3,6 +3,7 @@ using BepInEx.Logging;
 using HarmonyLib;
 using UnityEngine;
 using UnityEngine.UI;
+using UnityEngine.EventSystems;
 
 namespace HKAccessibility;
 
@@ -96,5 +97,181 @@ public static class UIManagerPatches
         {
             Logger.LogWarning("No text found in prompt");
         }
+    }
+
+    // Patch para anunciar información de slots de guardado cuando se seleccionan
+    [HarmonyPatch(typeof(UnityEngine.UI.SaveSlotButton), "OnSelect")]
+    [HarmonyPostfix]
+    public static void OnSaveSlotSelected(UnityEngine.UI.SaveSlotButton __instance, BaseEventData eventData)
+    {
+        try
+        {
+            Logger.LogInfo($"SaveSlotButton selected: {__instance.saveSlot}");
+
+            // Obtener el estado del slot
+            var saveFileState = __instance.saveFileState;
+            var slotNumber = __instance.saveSlot switch
+            {
+                UnityEngine.UI.SaveSlotButton.SaveSlot.SLOT_1 => 1,
+                UnityEngine.UI.SaveSlotButton.SaveSlot.SLOT_2 => 2,
+                UnityEngine.UI.SaveSlotButton.SaveSlot.SLOT_3 => 3,
+                UnityEngine.UI.SaveSlotButton.SaveSlot.SLOT_4 => 4,
+                _ => 0
+            };
+
+            string announcement = $"Slot {slotNumber}";
+
+            // Según el estado del archivo de guardado
+            switch (saveFileState)
+            {
+                case UnityEngine.UI.SaveSlotButton.SaveFileStates.Empty:
+                    announcement += ". Nuevo juego";
+                    break;
+
+                case UnityEngine.UI.SaveSlotButton.SaveFileStates.Corrupted:
+                    announcement += ". Archivo corrupto";
+                    break;
+
+                case UnityEngine.UI.SaveSlotButton.SaveFileStates.LoadedStats:
+                    // Obtener la información del guardado usando reflexión
+                    var saveStatsField = typeof(UnityEngine.UI.SaveSlotButton).GetField("saveStats",
+                        System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance);
+
+                    if (saveStatsField != null)
+                    {
+                        var saveStats = saveStatsField.GetValue(__instance) as SaveStats;
+
+                        if (saveStats != null)
+                        {
+                            announcement += ". Partida guardada";
+
+                            // Obtener la ubicación
+                            if (__instance.locationText != null && !string.IsNullOrEmpty(__instance.locationText.text))
+                            {
+                                string location = __instance.locationText.text.Replace("\n", " ").Replace("\r", " ").Trim();
+                                announcement += $". {location}";
+                            }
+
+                            // Obtener porcentaje de completado
+                            if (__instance.completionText != null && !string.IsNullOrEmpty(__instance.completionText.text))
+                            {
+                                announcement += $". {__instance.completionText.text} completado";
+                            }
+
+                            // Obtener tiempo de juego
+                            if (__instance.playTimeText != null && !string.IsNullOrEmpty(__instance.playTimeText.text))
+                            {
+                                announcement += $". {__instance.playTimeText.text}";
+                            }
+
+                            // Obtener geo
+                            if (__instance.geoText != null && !string.IsNullOrEmpty(__instance.geoText.text) && __instance.geoIcon.enabled)
+                            {
+                                announcement += $". {__instance.geoText.text} Geo";
+                            }
+
+                            // Detectar modo Steel Soul
+                            if (saveStats.permadeathMode == 1)
+                            {
+                                announcement += ". Modo Steel Soul";
+                            }
+                            else if (saveStats.permadeathMode == 2)
+                            {
+                                announcement = $"Slot {slotNumber}. Steel Soul derrotado";
+                            }
+                        }
+                    }
+                    break;
+
+                case UnityEngine.UI.SaveSlotButton.SaveFileStates.OperationInProgress:
+                    announcement += ". Cargando";
+                    break;
+            }
+
+            Logger.LogInfo($">>> Announcing save slot: {announcement}");
+            TolkBridge.Output(announcement, true);
+        }
+        catch (System.Exception ex)
+        {
+            Logger.LogError($"Error announcing save slot: {ex.Message}");
+        }
+    }
+
+    // Patch para anunciar cuando entras a un menú
+    [HarmonyPatch(typeof(UIManager), "ShowMenu")]
+    [HarmonyPrefix]
+    public static void OnShowMenu(MenuScreen menu)
+    {
+        try
+        {
+            if (menu == null || menu.gameObject == null)
+                return;
+
+            string menuName = menu.gameObject.name;
+
+            // Convertir nombres técnicos a nombres amigables
+            string friendlyName = menuName switch
+            {
+                "OptionsMenuScreen" => "Opciones",
+                "AudioMenuScreen" => "Audio",
+                "VideoMenuScreen" => "Vídeo",
+                "GamepadMenuScreen" => "Mando",
+                "KeyboardMenuScreen" => "Teclado",
+                "GameOptionsMenuScreen" => "Opciones de juego",
+                "PauseMenuScreen" => "Pausa",
+                "AchievementsMenuScreen" => "Logros",
+                "ExtrasMenuScreen" => "Extras",
+                "OverscanMenuScreen" => "Ajuste de pantalla",
+                "BrightnessMenuScreen" => "Brillo",
+                "RemapGamepadMenuScreen" => "Reasignar controles de mando",
+                _ => menuName.Replace("MenuScreen", "").Replace("Screen", "")
+            };
+
+            Logger.LogInfo($">>> Announcing menu: {friendlyName}");
+            TolkBridge.Output(friendlyName, true);
+        }
+        catch (System.Exception ex)
+        {
+            Logger.LogError($"Error announcing menu: {ex.Message}");
+        }
+    }
+
+    // Patch para anunciar cuando se guarda el juego
+    [HarmonyPatch(typeof(GameManager), "SaveGame", new System.Type[] { typeof(System.Action<bool>) })]
+    [HarmonyPrefix]
+    public static void OnSaveGame()
+    {
+        try
+        {
+            Logger.LogInfo(">>> Game save triggered");
+            TolkBridge.Output("Guardando juego", false);
+        }
+        catch (System.Exception ex)
+        {
+            Logger.LogError($"Error announcing game save: {ex.Message}");
+        }
+    }
+
+    // Patch para anunciar cuando termina de guardarse
+    [HarmonyPatch(typeof(GameManager), "SaveGame", new System.Type[] { typeof(System.Action<bool>) })]
+    [HarmonyPostfix]
+    public static void OnSaveGameComplete()
+    {
+        try
+        {
+            Logger.LogInfo(">>> Game save completed");
+            // Pequeño delay para que el anuncio no interrumpa el anterior
+            GameManager.instance.StartCoroutine(AnnounceSaveComplete());
+        }
+        catch (System.Exception ex)
+        {
+            Logger.LogError($"Error announcing save completion: {ex.Message}");
+        }
+    }
+
+    private static IEnumerator AnnounceSaveComplete()
+    {
+        yield return new WaitForSecondsRealtime(0.3f);
+        TolkBridge.Output("Juego guardado", false);
     }
 }

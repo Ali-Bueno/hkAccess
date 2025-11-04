@@ -47,16 +47,22 @@ hkAccess/
   - `MenuOptionHorizontal` and subclasses (resolution, language, display mode)
   - `MenuAudioSlider` for volume controls
 - ✅ **Value Change Monitoring:** Real-time coroutines announce slider/toggle/dropdown changes
-- ✅ **Popup Detection:** Announces confirmation dialogs via Canvas sortingOrder
+- ✅ **Popup Detection:** Announces confirmation dialogs via Harmony patches
 - ✅ **Text Formatting:** Cleans up newlines and formats announcements properly
 - ✅ **Full Descriptions:** Reads complete option descriptions (e.g., VSync tooltips)
+- ✅ **Save Slot Information:** Announces detailed save slot data (location, completion %, playtime, geo, Steel Soul mode)
+- ✅ **Menu Navigation:** Announces menu names when entering different menus
+- ✅ **Game Save Feedback:** Announces when the game is being saved and when save completes
 
 ### Technical Implementation
 - **EventSystem Integration:** Tracks currently selected GameObject
-- **Reflection API:** Accesses private fields in game's custom components
+- **Reflection API:** Accesses private fields in game's custom components and SaveStats data
 - **Coroutine Monitoring:** Tracks value changes while UI element is focused
 - **Cleanup System:** Proper disposal of coroutines and event handlers
-- **Harmony Patches:** Intercepts UIManager methods to announce confirmation dialogs
+- **Harmony Patches:** Intercepts game methods for announcements:
+  - `UIManager` methods for confirmation dialogs and menu navigation
+  - `SaveSlotButton.OnSelect` for save slot information
+  - `GameManager.SaveGame` for save notifications
 
 ---
 
