@@ -76,6 +76,9 @@ Develop a full accessibility layer for *Hollow Knight* focused on **audio-based 
 ### Available Resources:
 - **Our Mod Code:** Review `UIManagerPatches.cs`, `MenuAccessibility.cs`, `Plugin.cs` for existing patterns
 - **Decompiled Code:** `D:\code\unity and such\hk access\hk code\`
+  - **IMPORTANT:** The game code directory is in `.gitignore` and excluded from version control, but is fully accessible for reading and analysis
+  - Claude Code can freely read and analyze all files in `hk code/` regardless of .gitignore restrictions
+  - Always analyze the decompiled game code before implementing features
 - **Game Assemblies:** `D:\games\steam\steamapps\common\Hollow Knight\hollow_knight_Data\Managed\`
 - **Tools:** Use Grep, Task, or Explore agents to search both our code and game code efficiently
 
@@ -256,6 +259,7 @@ git push -u origin main
 
 ## 📝 Notes
 - Decompiled game code in `hk code/` is excluded from builds via .csproj
+- **Game code is in .gitignore but fully accessible:** The `hk code/` directory is excluded from version control but Claude Code can freely read and analyze all files for implementation guidance
 - Tolk DLLs must be in game root directory (not plugins folder)
 - Unity DLL references point to local Hollow Knight installation
 - Screen reader must be running before launching game
