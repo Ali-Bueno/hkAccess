@@ -65,6 +65,13 @@ Develop a full accessibility layer for *Hollow Knight* focused on **audio-based 
 4. **Implemented patch** - Patched `OnSelect` method and used reflection pattern
 5. **Announced consistently** - Used same announcement format as other UI elements
 
+**Menu Option Changes (CORRECT):**
+1. **Identified problem** - Generic coroutine monitoring wasn't detecting value changes
+2. **Analyzed game code** - Found `MenuAudioSlider.cs` has `UpdateTextValue()` method called on changes
+3. **Found pattern** - `MenuOptionHorizontal` and subclasses all call `UpdateText()` when values change
+4. **Implemented patches** - Created specific Harmony patches for these exact methods
+5. **Result** - Immediate announcements without polling/monitoring
+
 **What NOT to Do (INCORRECT):**
 - ❌ Creating generic text monitoring without knowing what components the game uses
 - ❌ Assuming Unity standard components when game uses custom systems
@@ -88,6 +95,87 @@ Develop a full accessibility layer for *Hollow Knight* focused on **audio-based 
 - [ ] Have I searched the decompiled game code for relevant classes?
 - [ ] Am I using Harmony patches on specific game methods (not generic Unity monitoring)?
 - [ ] Is this implementation consistent with our existing code style?
+
+---
+
+## 📦 Modular Architecture Principles
+
+### CRITICAL: Keep Code Modular and Maintainable
+
+**The codebase MUST follow a modular architecture with small, focused files.**
+
+#### File Size Guidelines:
+- **Preferred:** Files should be 50-200 lines of code
+- **Maximum:** Files should NOT exceed 300-400 lines
+- **When to Split:** If a file grows beyond 300 lines, split it into smaller, focused modules
+
+#### Organization Principles:
+1. **Separation of Concerns**
+   - Each file should handle ONE specific responsibility
+   - ✅ GOOD: `DialogueBoxPatches.cs` - Only handles dialogue announcements
+   - ✅ GOOD: `MapPatches.cs` - Only handles map and area announcements
+   - ❌ BAD: `AllPatches.cs` - Contains all patches in one 2000-line file
+
+2. **Patches Organization**
+   - All Harmony patches go in `Patches/` directory
+   - Group related patches by **functionality**, not by game class
+   - ✅ GOOD: `InventoryPatches.cs` - All inventory-related patches (charms, items, etc.)
+   - ✅ GOOD: `GameStatePatches.cs` - All game state patches (save, menus, prompts)
+   - ❌ BAD: `PlayerDataPatches.cs` - Contains unrelated PlayerData patches
+
+3. **Utility Classes**
+   - Create focused utility classes for specific purposes
+   - ✅ GOOD: `SpokenTextHistory.cs` - Single responsibility: prevent duplicate announcements
+   - ✅ GOOD: `TolkScreenReader.cs` - Single responsibility: screen reader wrapper
+   - ❌ BAD: `Utilities.cs` - Mixed bag of unrelated helper functions
+
+4. **Current Modular Structure**
+   ```
+   hkAccess/src/
+   ├── Plugin.cs                         # Entry point (~140 lines)
+   ├── TolkScreenReader.cs               # Screen reader wrapper (~130 lines)
+   ├── MenuNavigationMonitor.cs          # Initial UI selection announcements (~250 lines)
+   ├── InputManager.cs                   # Accessibility input handling (~30 lines)
+   ├── Patches/
+   │   ├── MenuAudioSliderPatches.cs     # Volume slider changes (~40 lines)
+   │   ├── MenuOptionHorizontalPatches.cs # All horizontal options + language (~120 lines)
+   │   ├── SceneTitlePatches.cs          # Scene/menu title announcements (~100 lines)
+   │   ├── MenuSelectablePatches.cs      # Menu element selection (~260 lines)
+   │   ├── InventoryPatches.cs           # Charm equip/unequip (~40 lines)
+   │   ├── DialogueBoxPatches.cs         # In-game dialogue (~40 lines)
+   │   ├── MapPatches.cs                 # Area and map announcements (~80 lines)
+   │   ├── GameStatePatches.cs           # Saves, prompts, menus (~260 lines)
+   │   └── CutscenePatches.cs            # Cutscene text monitoring (~70 lines)
+   ```
+
+5. **When Files Grow Too Large**
+   - If a patch file exceeds 300 lines, split it by sub-functionality
+   - Example: `GameStatePatches.cs` could be split into:
+     - `SaveSlotPatches.cs` - Save slot announcements
+     - `PromptPatches.cs` - Confirmation prompts
+     - `MenuNavigationPatches.cs` - Menu navigation
+   - Only split when it improves clarity, not just for size
+
+6. **Benefits of Modularity**
+   - ✅ Easier to understand and review
+   - ✅ Faster to locate bugs and issues
+   - ✅ Simpler to test individual features
+   - ✅ Reduces merge conflicts
+   - ✅ Easier for new developers to contribute
+   - ✅ Better code reusability
+
+#### Anti-Patterns to Avoid:
+- ❌ Giant "god" files with thousands of lines
+- ❌ Multiple unrelated responsibilities in one file
+- ❌ Deep nesting (more than 3 levels)
+- ❌ Duplicate code across multiple files
+- ❌ Circular dependencies between modules
+
+#### Before Creating New Files:
+1. Check if existing module can be extended (without exceeding size limits)
+2. Ensure the new module has a clear, single responsibility
+3. Choose a descriptive, specific name
+4. Document the module's purpose in XML comments
 
 ---
 
@@ -125,12 +213,17 @@ hkAccess/
 
 ### Menu Accessibility System
 - ✅ **Screen Reader Integration:** Announces menu navigation via Tolk
-- ✅ **Scene Title Announcements:** Reads menu titles when entering new scenes
+- ✅ **Scene Title Announcements:** Reads menu titles when entering new scenes via `SceneTitlePatches.cs`
 - ✅ **UI Element Detection:** Supports buttons, sliders, toggles, and custom menu components
-- ✅ **Custom Component Support:** Uses reflection to access Hollow Knight's custom UI:
-  - `MenuOptionHorizontal` and subclasses (resolution, language, display mode)
-  - `MenuAudioSlider` for volume controls
-- ✅ **Value Change Monitoring:** Real-time coroutines announce slider/toggle/dropdown changes
+- ✅ **Real-Time Value Changes via Harmony Patches:**
+  - `MenuAudioSliderPatches.cs` - Patches `UpdateTextValue()` for volume sliders (Master, Music, Sound)
+  - `MenuOptionHorizontalPatches.cs` - Patches `UpdateText()` for all horizontal options:
+    - Resolution, Display Mode, Frame Cap
+    - VSync (On/Off), Fullscreen mode
+    - Backer Credits, Native Achievements
+    - Controller Rumble
+  - `MenuLanguageSettingPatches.cs` - Patches `UpdateText()` specifically for language changes
+- ✅ **Initial Selection Announcements:** `MenuNavigationMonitor.cs` announces UI elements when first selected
 - ✅ **Popup Detection:** Announces confirmation dialogs via Harmony patches
 - ✅ **Text Formatting:** Cleans up newlines and formats announcements properly
 - ✅ **Full Descriptions:** Reads complete option descriptions (e.g., VSync tooltips)
@@ -152,22 +245,27 @@ hkAccess/
 - ✅ **Interrupt Mode:** Uses interrupt flag to prevent text overlap during rapid sequences
 
 ### Technical Implementation
-- **EventSystem Integration:** Tracks currently selected GameObject
+- **EventSystem Integration:** Tracks currently selected GameObject for initial announcements
 - **Reflection API:** Accesses private fields in game's custom components and SaveStats data
-- **Coroutine Monitoring:** Tracks value changes while UI element is focused
-- **Cleanup System:** Proper disposal of coroutines and event handlers
-- **Harmony Patches:** Intercepts game methods for announcements:
-  - `UIManager.SetState` (Postfix) for cutscene state detection
-  - `UIManager` methods for confirmation dialogs and menu navigation
-  - `SaveSlotButton.OnSelect` for save slot information
-  - `GameManager.SaveGame` for save notifications
-  - `DialogueBox.ShowPage` for in-game dialogue announcements
+- **Harmony Patches (Game-Specific Methods):** Intercepts exact game methods that handle value changes:
+  - **Menu Value Changes:**
+    - `MenuAudioSlider.UpdateTextValue()` - Volume slider changes
+    - `MenuOptionHorizontal.UpdateText()` - All horizontal options (resolution, VSync, etc.)
+    - `MenuLanguageSetting.UpdateText()` - Language changes (overrides base method)
+  - **Menu Navigation:**
+    - `UIManager.SetState` (Postfix) for cutscene state detection
+    - `UIManager` methods for confirmation dialogs and menu navigation
+    - `SaveSlotButton.OnSelect` for save slot information
+  - **Game State:**
+    - `GameManager.SaveGame` for save notifications
+    - `DialogueBox.ShowPage` for in-game dialogue announcements
 - **TextMeshPro Integration:** Extracts text from TextMeshPro components with page-based reading
 - **Cutscene Monitoring System:**
   - Continuous coroutine runs while `UIState == CUTSCENE`
   - Scans all TextMeshPro components every 0.1 seconds
   - Tracks visibility via alpha channel
   - Maintains HashSet of announced texts to prevent duplicates
+- **No Generic Monitoring:** Avoids generic Unity component monitoring; uses game-specific method patches instead
 
 ---
 

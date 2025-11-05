@@ -1,8 +1,8 @@
 ﻿using System;
 using BepInEx;
 using BepInEx.Logging;
-using System.Runtime.InteropServices;
 using HarmonyLib;
+using UnityEngine;
 
 namespace HKAccessibility;
 
@@ -10,8 +10,9 @@ namespace HKAccessibility;
 public class Plugin : BaseUnityPlugin
 {
     internal static new ManualLogSource Logger;
-    private MenuAccessibility menuAccessibility;
     private Harmony harmony;
+    private InputManager inputManager;
+    private MenuNavigationMonitor menuNavigationMonitor;
 
     private void Awake()
     {
@@ -19,30 +20,80 @@ public class Plugin : BaseUnityPlugin
         Logger.LogInfo("=== Hollow Knight Accessibility Mod ===");
         Logger.LogInfo($"Version {MyPluginInfo.PLUGIN_VERSION} loaded successfully!");
 
+        // Initialize Tolk screen reader
         try
         {
-            TolkBridge.Load();
-            string screenReaderName = TolkBridge.DetectScreenReader();
-
-            if (!string.IsNullOrEmpty(screenReaderName))
+            if (TolkScreenReader.Instance.Initialize())
             {
-                Logger.LogInfo($"Screen reader detected: {screenReaderName}");
-                TolkBridge.Output("Hollow Knight Accessibility Mod loaded successfully!");
-                Logger.LogInfo("Screen reader announcement sent.");
+                Logger.LogInfo("Tolk initialized successfully!");
+
+                string detectedReader = TolkScreenReader.Instance.DetectScreenReader();
+                if (!string.IsNullOrEmpty(detectedReader))
+                {
+                    Logger.LogInfo($"Detected screen reader: {detectedReader}");
+                }
+                else
+                {
+                    Logger.LogInfo("No screen reader detected, using SAPI fallback");
+                }
+
+                if (TolkScreenReader.Instance.HasSpeech())
+                {
+                    Logger.LogInfo("Speech output available");
+                    TolkScreenReader.Instance.Speak("Hollow Knight Accessibility Mod loaded successfully", false);
+                }
+
+                if (TolkScreenReader.Instance.HasBraille())
+                {
+                    Logger.LogInfo("Braille output available");
+                }
             }
             else
             {
-                Logger.LogWarning("No screen reader detected.");
+                Logger.LogWarning("Failed to initialize Tolk - falling back to console logging");
             }
         }
-        catch (System.Exception ex)
+        catch (Exception ex)
         {
-            Logger.LogError($"Failed to initialize screen reader: {ex.Message}");
+            Logger.LogError($"Failed to initialize screen reader: {ex}");
         }
 
+        // Apply Harmony patches
         ApplyHarmonyPatches();
-        InitializeMenuAccessibility();
-        Logger.LogInfo("Audio navigation and screen reader support initialized.");
+
+        // Initialize menu navigation monitor (handles menu navigation and value monitoring)
+        InitializeMenuNavigationMonitor();
+
+        // Initialize input manager
+        inputManager = new InputManager();
+
+        Logger.LogInfo("All accessibility systems initialized successfully");
+    }
+
+    private void InitializeMenuNavigationMonitor()
+    {
+        try
+        {
+            menuNavigationMonitor = gameObject.AddComponent<MenuNavigationMonitor>();
+            Logger.LogInfo("Menu navigation monitor initialized.");
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError($"Failed to initialize menu navigation monitor: {ex}");
+        }
+    }
+
+    private void Update()
+    {
+        try
+        {
+            // Handle accessibility input keys
+            inputManager?.HandleInput();
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError($"Error in Plugin.Update: {ex}");
+        }
     }
 
     private void ApplyHarmonyPatches()
@@ -55,20 +106,7 @@ public class Plugin : BaseUnityPlugin
         }
         catch (Exception ex)
         {
-            Logger.LogError($"Failed to apply Harmony patches: {ex.Message}");
-        }
-    }
-
-    private void InitializeMenuAccessibility()
-    {
-        try
-        {
-            menuAccessibility = gameObject.AddComponent<MenuAccessibility>();
-            Logger.LogInfo("Menu accessibility system initialized.");
-        }
-        catch (Exception ex)
-        {
-            Logger.LogError($"Failed to initialize menu accessibility: {ex.Message}");
+            Logger.LogError($"Failed to apply Harmony patches: {ex}");
         }
     }
 
@@ -81,46 +119,20 @@ public class Plugin : BaseUnityPlugin
         }
         catch (Exception ex)
         {
-            Logger.LogError($"Error removing Harmony patches: {ex.Message}");
+            Logger.LogError($"Error removing Harmony patches: {ex}");
         }
 
         try
         {
-            TolkBridge.Output("Hollow Knight Accessibility Mod unloaded.");
-            TolkBridge.Unload();
+            TolkScreenReader.Instance.Speak("Hollow Knight Accessibility Mod unloaded", false);
+            TolkScreenReader.Instance.Cleanup();
             Logger.LogInfo("Screen reader support unloaded.");
         }
-        catch (System.Exception ex)
+        catch (Exception ex)
         {
-            Logger.LogError($"Error during cleanup: {ex.Message}");
+            Logger.LogError($"Error during cleanup: {ex}");
         }
 
         Logger.LogInfo("Accessibility Mod unloaded.");
     }
-}
-
-public static class TolkBridge
-{
-    [DllImport("Tolk.dll", CallingConvention = CallingConvention.Cdecl)]
-    public static extern void Tolk_Load();
-
-    [DllImport("Tolk.dll", CallingConvention = CallingConvention.Cdecl)]
-    public static extern void Tolk_Unload();
-
-    [DllImport("Tolk.dll", CallingConvention = CallingConvention.Cdecl, CharSet = CharSet.Unicode)]
-    public static extern IntPtr Tolk_DetectScreenReader();
-
-    [DllImport("Tolk.dll", CallingConvention = CallingConvention.Cdecl, CharSet = CharSet.Unicode)]
-    public static extern bool Tolk_Output([MarshalAs(UnmanagedType.LPWStr)] string text, [MarshalAs(UnmanagedType.Bool)] bool interrupt = false);
-
-    public static void Load() => Tolk_Load();
-    public static void Unload() => Tolk_Unload();
-
-    public static string DetectScreenReader()
-    {
-        IntPtr ptr = Tolk_DetectScreenReader();
-        return ptr != IntPtr.Zero ? Marshal.PtrToStringUni(ptr) : string.Empty;
-    }
-
-    public static void Output(string text, bool interrupt = false) => Tolk_Output(text, interrupt);
 }
