@@ -134,11 +134,11 @@ Develop a full accessibility layer for *Hollow Knight* focused on **audio-based 
    hkAccess/src/
    ├── Plugin.cs                         # Entry point (~140 lines)
    ├── TolkScreenReader.cs               # Screen reader wrapper (~130 lines)
-   ├── MenuNavigationMonitor.cs          # Initial UI selection announcements (~250 lines)
+   ├── MenuNavigationMonitor.cs          # UI selection announcements + inventory support (~420 lines)
    ├── InputManager.cs                   # Accessibility input handling (~30 lines)
    ├── Patches/
-   │   ├── MenuAudioSliderPatches.cs     # Volume slider changes (~40 lines)
-   │   ├── MenuOptionHorizontalPatches.cs # All horizontal options + language (~120 lines)
+   │   ├── MenuAudioSliderPatches.cs     # Volume slider changes (~50 lines)
+   │   ├── MenuOptionHorizontalPatches.cs # All horizontal options + language (~135 lines)
    │   ├── SceneTitlePatches.cs          # Scene/menu title announcements (~100 lines)
    │   ├── MenuSelectablePatches.cs      # Menu element selection (~260 lines)
    │   ├── InventoryPatches.cs           # Charm equip/unequip (~40 lines)
@@ -147,6 +147,9 @@ Develop a full accessibility layer for *Hollow Knight* focused on **audio-based 
    │   ├── GameStatePatches.cs           # Saves, prompts, menus (~260 lines)
    │   └── CutscenePatches.cs            # Cutscene text monitoring (~70 lines)
    ```
+
+   **Note:** `MenuNavigationMonitor.cs` has grown to 420 lines. Consider splitting if it exceeds 500 lines:
+   - Potential split: Extract inventory support into `InventoryNavigationMonitor.cs`
 
 5. **When Files Grow Too Large**
    - If a patch file exceeds 300 lines, split it by sub-functionality
@@ -382,4 +385,40 @@ git push -u origin main
 **Implemented Solution:**
 - Filters ConnectControllerPanel by GameObject name
 - Excludes any text containing "Conecta" or "connect"
+
+### ✅ Scene Change Announcements (Harmony Error)
+**Problem:** SceneTitlePatches tried to patch `Internal_ActiveSceneChanged`, a Unity internal method not accessible to Harmony
+**Implemented Solution:**
+- Analyzed game code and found `GameManager.BeginScene()` is called when scenes start
+- Changed from trying to use Unity events to patching game-specific method
+- Uses `[HarmonyPatch(typeof(GameManager), nameof(GameManager.BeginScene))]`
+- Eliminated Harmony error while maintaining functionality
+
+### ✅ Menu Value Initialization Spam
+**Problem:** Menu value patches announced ALL settings when entering menus (not just user changes)
+**Implemented Solution:**
+- Added `EventSystem.current.currentSelectedGameObject` verification
+- Patches now only announce when the element is actively selected by the user
+- Applied to: `MenuAudioSliderPatches`, `MenuOptionHorizontalPatches`, `MenuLanguageSettingPatches`
+- Eliminates announcement spam during menu initialization
+
+### ✅ Generic "Activado" Announcements
+**Problem:** Unlabeled toggles announced generic "activado" when returning to main menu
+**Implemented Solution:**
+- Modified `MenuNavigationMonitor.BuildToggleDescription()` to return empty string for toggles without labels
+- Prevents meaningless announcements
+
+## 🚧 Known Issues (In Progress)
+
+### ⚠️ Inventory Navigation
+**Status:** Partially implemented, not yet working
+**Current Implementation:**
+- Added `InvCharmBackboard` detection in `MenuNavigationMonitor.cs`
+- Added `BuildCharmInventoryDescription()` method to announce charm details
+- Added `InvItemDisplay` detection for item inventory
+- **Issue:** Navigation system not triggering announcements when moving through inventory
+**Next Steps:**
+- Need to analyze how the game's inventory navigation works
+- May need different approach than EventSystem selection monitoring
+- Consider patching inventory-specific navigation methods
 

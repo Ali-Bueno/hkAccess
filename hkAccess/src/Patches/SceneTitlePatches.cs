@@ -2,28 +2,26 @@ using HarmonyLib;
 using System.Collections;
 using UnityEngine;
 using UnityEngine.UI;
-using UnityEngine.SceneManagement;
 
 namespace HKAccessibility.Patches
 {
     /// <summary>
     /// Patches for announcing scene/menu titles when entering new scenes
     /// </summary>
-    [HarmonyPatch]
+    [HarmonyPatch(typeof(GameManager), nameof(GameManager.BeginScene))]
     public static class SceneTitlePatches
     {
         private static string lastAnnouncedScene = "";
 
         /// <summary>
-        /// Patch SceneManager.activeSceneChanged to announce menu titles
+        /// Patch GameManager.BeginScene to announce menu titles when scenes start
         /// </summary>
-        [HarmonyPatch(typeof(SceneManager), "Internal_ActiveSceneChanged")]
         [HarmonyPostfix]
-        public static void OnSceneChanged(Scene previousActiveScene, Scene newActiveScene)
+        public static void OnBeginScene()
         {
             try
             {
-                string sceneName = newActiveScene.name;
+                string sceneName = UnityEngine.SceneManagement.SceneManager.GetActiveScene().name;
 
                 if (sceneName == lastAnnouncedScene)
                     return;
@@ -38,7 +36,7 @@ namespace HKAccessibility.Patches
             }
             catch (System.Exception ex)
             {
-                Plugin.Logger.LogError($"Error in OnSceneChanged: {ex}");
+                Plugin.Logger.LogError($"Error in OnBeginScene: {ex}");
             }
         }
 

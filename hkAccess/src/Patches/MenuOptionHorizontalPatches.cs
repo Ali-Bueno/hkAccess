@@ -2,6 +2,7 @@ using HarmonyLib;
 using System;
 using System.Reflection;
 using UnityEngine.UI;
+using UnityEngine.EventSystems;
 
 namespace HKAccessibility.Patches
 {
@@ -36,6 +37,12 @@ namespace HKAccessibility.Patches
 
         private static void AnnounceOptionChange(MenuOptionHorizontal instance)
         {
+            // Only announce if this option is currently selected by the user
+            if (EventSystem.current == null || EventSystem.current.currentSelectedGameObject != instance.gameObject)
+            {
+                return;
+            }
+
             // Get the optionText field using reflection
             FieldInfo optionTextField = typeof(MenuOptionHorizontal).GetField("optionText", BindingFlags.Public | BindingFlags.Instance);
             if (optionTextField == null)
@@ -84,6 +91,12 @@ namespace HKAccessibility.Patches
         {
             try
             {
+                // Only announce if this option is currently selected by the user
+                if (EventSystem.current == null || EventSystem.current.currentSelectedGameObject != __instance.gameObject)
+                {
+                    return;
+                }
+
                 // Get the optionText field using reflection
                 FieldInfo optionTextField = typeof(MenuOptionHorizontal).GetField("optionText", BindingFlags.Public | BindingFlags.Instance);
                 if (optionTextField == null)

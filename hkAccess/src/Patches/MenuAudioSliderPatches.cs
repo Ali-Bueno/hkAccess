@@ -1,5 +1,6 @@
 using HarmonyLib;
 using System;
+using UnityEngine.EventSystems;
 
 namespace HKAccessibility.Patches
 {
@@ -17,10 +18,16 @@ namespace HKAccessibility.Patches
         /// </summary>
         [HarmonyPatch("UpdateTextValue")]
         [HarmonyPostfix]
-        public static void OnUpdateTextValue(float value)
+        public static void OnUpdateTextValue(MenuAudioSlider __instance, float value)
         {
             try
             {
+                // Only announce if this slider is currently selected by the user
+                if (EventSystem.current == null || EventSystem.current.currentSelectedGameObject != __instance.gameObject)
+                {
+                    return;
+                }
+
                 // Debounce: Don't announce the same value twice within 0.15 seconds
                 if (value == lastAnnouncedValue && UnityEngine.Time.realtimeSinceStartup - lastAnnounceTime < 0.15f)
                 {
