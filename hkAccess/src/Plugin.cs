@@ -10,12 +10,16 @@ namespace HKAccessibility;
 public class Plugin : BaseUnityPlugin
 {
     internal static new ManualLogSource Logger;
+    internal static Plugin Instance { get; private set; }
+
     private Harmony harmony;
     private InputManager inputManager;
     private MenuNavigationMonitor menuNavigationMonitor;
+    private InventoryReader inventoryReader;
 
     private void Awake()
     {
+        Instance = this;
         Logger = base.Logger;
         Logger.LogInfo("=== Hollow Knight Accessibility Mod ===");
         Logger.LogInfo($"Version {MyPluginInfo.PLUGIN_VERSION} loaded successfully!");
@@ -63,6 +67,10 @@ public class Plugin : BaseUnityPlugin
 
         // Initialize menu navigation monitor (handles menu navigation and value monitoring)
         InitializeMenuNavigationMonitor();
+
+        // Inventory monitor: reads inventory open/close and dynamic texts (names/descriptions)
+        inventoryReader = gameObject.AddComponent<InventoryReader>();
+        Logger.LogInfo("Inventory reader initialized.");
 
         // Initialize input manager
         inputManager = new InputManager();

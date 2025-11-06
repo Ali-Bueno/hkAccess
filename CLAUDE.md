@@ -134,22 +134,24 @@ Develop a full accessibility layer for *Hollow Knight* focused on **audio-based 
    hkAccess/src/
    ├── Plugin.cs                         # Entry point (~140 lines)
    ├── TolkScreenReader.cs               # Screen reader wrapper (~130 lines)
-   ├── MenuNavigationMonitor.cs          # UI selection announcements + inventory support (~420 lines)
+   ├── MenuNavigationMonitor.cs          # UI selection announcements (~310 lines)
+   ├── InventoryReader.cs                # Inventory text monitoring and aggregation (~593 lines)
    ├── InputManager.cs                   # Accessibility input handling (~30 lines)
    ├── Patches/
    │   ├── MenuAudioSliderPatches.cs     # Volume slider changes (~50 lines)
    │   ├── MenuOptionHorizontalPatches.cs # All horizontal options + language (~135 lines)
    │   ├── SceneTitlePatches.cs          # Scene/menu title announcements (~100 lines)
    │   ├── MenuSelectablePatches.cs      # Menu element selection (~260 lines)
-   │   ├── InventoryPatches.cs           # Charm equip/unequip (~40 lines)
+   │   ├── InventoryPatches.cs           # Charm selection via Harmony (~87 lines)
    │   ├── DialogueBoxPatches.cs         # In-game dialogue (~40 lines)
    │   ├── MapPatches.cs                 # Area and map announcements (~80 lines)
    │   ├── GameStatePatches.cs           # Saves, prompts, menus (~260 lines)
    │   └── CutscenePatches.cs            # Cutscene text monitoring (~70 lines)
    ```
 
-   **Note:** `MenuNavigationMonitor.cs` has grown to 420 lines. Consider splitting if it exceeds 500 lines:
-   - Potential split: Extract inventory support into `InventoryNavigationMonitor.cs`
+   **Note:** `InventoryReader.cs` has grown to 593 lines. Consider splitting if functionality expands:
+   - Potential split: Separate charm monitoring from item monitoring
+   - Alternative: Extract text aggregation logic into utility class
 
 5. **When Files Grow Too Large**
    - If a patch file exceeds 300 lines, split it by sub-functionality
@@ -247,6 +249,31 @@ hkAccess/
 - ✅ **Duplicate Prevention:** HashSet tracking ensures each text is announced only once
 - ✅ **Interrupt Mode:** Uses interrupt flag to prevent text overlap during rapid sequences
 
+### Inventory Accessibility System
+- ✅ **Inventory Open/Close Detection:** Monitors inventory state via `GameManager.inventoryFSM` and "Charms Pane" tag
+- ✅ **Charm Selection Announcements:**
+  - Harmony patch on `InvCharmBackboard.SelectCharm` for immediate selection feedback
+  - PlayMakerFSM monitoring for charm navigation
+  - Localized charm names and descriptions via `Language.Language` system
+  - Notch cost announcement (e.g., "Costo: 2 muescas")
+  - Equipped/unequipped state indication
+  - "New" charm indicator
+- ✅ **Item Selection Announcements:**
+  - Multi-component text monitoring (TextMeshPro, TextMeshProUGUI, tk2dTextMesh)
+  - Intelligent name/description pairing via vertical proximity and text length heuristics
+  - Quantity announcements for collectibles (Geo, Simple Keys, Pale Ore, Rancid Eggs)
+  - Filters out headers, numbers, and controller prompts
+- ✅ **Text Aggregation System:**
+  - Initial snapshot on inventory open to suppress static UI labels
+  - Change detection based on component instance IDs
+  - 120ms debounce delay for UI text updates
+  - Longest text heuristic to identify descriptions
+  - Shortest nearby text for item names
+- ✅ **Multiple Text Component Support:**
+  - TextMeshPro (TMP) - Unity's modern text system
+  - TextMeshProUGUI (Canvas-based TMP)
+  - tk2dTextMesh - 2D Toolkit legacy system used in original game UI
+
 ### Technical Implementation
 - **EventSystem Integration:** Tracks currently selected GameObject for initial announcements
 - **Reflection API:** Accesses private fields in game's custom components and SaveStats data
@@ -259,6 +286,8 @@ hkAccess/
     - `UIManager.SetState` (Postfix) for cutscene state detection
     - `UIManager` methods for confirmation dialogs and menu navigation
     - `SaveSlotButton.OnSelect` for save slot information
+  - **Inventory Navigation:**
+    - `InvCharmBackboard.SelectCharm` (Postfix) for charm selection announcements
   - **Game State:**
     - `GameManager.SaveGame` for save notifications
     - `DialogueBox.ShowPage` for in-game dialogue announcements
@@ -268,7 +297,13 @@ hkAccess/
   - Scans all TextMeshPro components every 0.1 seconds
   - Tracks visibility via alpha channel
   - Maintains HashSet of announced texts to prevent duplicates
-- **No Generic Monitoring:** Avoids generic Unity component monitoring; uses game-specific method patches instead
+- **Inventory Monitoring System:**
+  - Continuous coroutine monitors inventory open state every 0.1 seconds
+  - PlayMakerFSM access for charm selection state
+  - Multi-component text scanning (TMP, TMPUGUI, tk2dTextMesh)
+  - Instance ID tracking for change detection
+  - Intelligent text aggregation with spatial proximity analysis
+- **No Generic Monitoring (Where Possible):** Prefers game-specific method patches over generic Unity component monitoring
 
 ---
 
@@ -408,17 +443,27 @@ git push -u origin main
 - Modified `MenuNavigationMonitor.BuildToggleDescription()` to return empty string for toggles without labels
 - Prevents meaningless announcements
 
+### ✅ Inventory Navigation
+**Problem:** Initial EventSystem-based approach didn't detect inventory navigation
+**Implemented Solution:**
+- Created dedicated `InventoryReader.cs` module (~593 lines) with continuous monitoring
+- Harmony patch on `InvCharmBackboard.SelectCharm` for immediate charm selection
+- PlayMakerFSM access to read charm selection state from "UI Charms" FSM
+- Multi-component text scanning (TextMeshPro, TextMeshProUGUI, tk2dTextMesh)
+- Intelligent text aggregation using spatial proximity and length heuristics
+- Announces charm names, descriptions, notch costs, and equipped status
+- Announces item names with quantities (Geo, Keys, Ore, Eggs)
+- Filters static UI labels via initial snapshot on inventory open
+
 ## 🚧 Known Issues (In Progress)
 
-### ⚠️ Inventory Navigation
-**Status:** Partially implemented, not yet working
+### ⚠️ Item Name Localization
+**Status:** Implemented with hardcoded Spanish names
 **Current Implementation:**
-- Added `InvCharmBackboard` detection in `MenuNavigationMonitor.cs`
-- Added `BuildCharmInventoryDescription()` method to announce charm details
-- Added `InvItemDisplay` detection for item inventory
-- **Issue:** Navigation system not triggering announcements when moving through inventory
+- Item quantities work correctly (Geo, Simple Keys, Pale Ore, Rancid Eggs)
+- Names are currently matched via hardcoded Spanish strings in `InventoryReader.cs:372-376`
 **Next Steps:**
-- Need to analyze how the game's inventory navigation works
-- May need different approach than EventSystem selection monitoring
-- Consider patching inventory-specific navigation methods
+- Investigate game's localization system for item names
+- Replace hardcoded name matching with Language.Language lookups
+- Support all language settings (English, Spanish, Italian, French, Portuguese, etc.)
 

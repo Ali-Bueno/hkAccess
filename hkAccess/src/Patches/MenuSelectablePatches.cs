@@ -16,78 +16,59 @@ namespace HKAccessibility.Patches
     {
         private static void Postfix(BaseEventData eventData, MenuSelectable __instance)
         {
-            // Handle Charms
+            // Handle Charms via InvCharmBackboard in hierarchy (reliable in inventory)
             try
             {
-                CharmItem charmItem = __instance.GetComponent<CharmItem>();
-                if (charmItem != null)
+                var backboard = __instance.GetComponentInParent<InvCharmBackboard>() ?? __instance.GetComponentInChildren<InvCharmBackboard>();
+                if (backboard != null)
                 {
-                    var charmID = Traverse.Create(charmItem).Field<int>("charmID").Value;
-
-                    string charmName = Language.Language.Get($"CHARM_NAME_{charmID}", "UI");
-                    string charmDesc = Language.Language.Get($"CHARM_DESC_{charmID}", "UI");
-                    int charmCost = PlayerData.instance.GetInt("charmCost_" + charmID);
-                    bool isEquipped = PlayerData.instance.GetBool($"equippedCharm_{charmID}");
-                    bool isNew = PlayerData.instance.GetBool($"newCharm_{charmID}");
-
-                    string announcement = "";
-                    if (isNew)
-                    {
-                        announcement += "Nuevo. ";
-                    }
-                    announcement += $"{charmName}. Costo: {charmCost} muescas. {charmDesc}";
-                    if (isEquipped)
-                    {
-                        announcement += " Actualmente equipado.";
-                    }
-
-                    if (!SpokenTextHistory.HasBeenSpoken(announcement))
-                    {
-                        Plugin.Logger.LogInfo($"[MenuSelectable (CharmItem)] Speaking: {announcement}");
-                        TolkScreenReader.Instance.Speak(announcement, false);
-                    }
+                    HKAccessibility.Patches.InventoryPatches.SpeakCharm(backboard.charmNum, backboard);
                     return;
                 }
             }
             catch (System.Exception ex)
             {
-                Plugin.Logger.LogError($"Error in MenuSelectable_OnSelect (CharmItem): {ex}");
+                Plugin.Logger.LogError($"Error in MenuSelectable_OnSelect (InvCharmBackboard): {ex}");
             }
 
             // Handle other Inventory Items
             try
             {
-                InvItemDisplay invItem = __instance.GetComponent<InvItemDisplay>();
+                InvItemDisplay invItem = __instance.GetComponentInParent<InvItemDisplay>() ?? __instance.GetComponentInChildren<InvItemDisplay>();
                 if (invItem != null)
                 {
-                    string playerdataName = Traverse.Create(invItem).Field<string>("playerdataName").Value;
+                    // Prefer reading visible text near the selection (inventory shows name/desc labels)
+                    string spoken = null;
+                    var tmpu = __instance.GetComponentInChildren<TextMeshProUGUI>();
+                    var tmp = __instance.GetComponentInChildren<TextMeshPro>();
+                    if (tmpu != null && !string.IsNullOrEmpty(tmpu.text)) spoken = tmpu.text;
+                    if (string.IsNullOrEmpty(spoken) && tmp != null && !string.IsNullOrEmpty(tmp.text)) spoken = tmp.text;
 
-                    string baseName = playerdataName.ToUpper();
-                    string itemNameKey = $"INV_NAME_{baseName}";
-                    string itemDescKey = $"INV_DESC_{baseName}";
-
-                    string itemName = Language.Language.Get(itemNameKey, "UI");
-                    string itemDesc = Language.Language.Get(itemDescKey, "UI");
-
-                    if (itemName != itemNameKey)
+                    if (!string.IsNullOrEmpty(spoken) && !SpokenTextHistory.HasBeenSpoken(spoken))
                     {
-                        int amount = PlayerData.instance.GetInt(playerdataName);
-                        string announcement = $"{itemName} ({amount}). {itemDesc}";
-                        if (!SpokenTextHistory.HasBeenSpoken(announcement))
-                        {
-                            Plugin.Logger.LogInfo($"[MenuSelectable (InvItemDisplay)] Speaking: {announcement}");
-                            TolkScreenReader.Instance.Speak(announcement, false);
-                        }
+                        Plugin.Logger.LogInfo($"[MenuSelectable (InvItemDisplay)] Speaking: {spoken}");
+                        TolkScreenReader.Instance.Speak(spoken, false);
                     }
                     else
                     {
-                        var textMesh = __instance.GetComponentInChildren<TextMeshProUGUI>();
-                        if (textMesh != null && !string.IsNullOrEmpty(textMesh.text))
+                        // As a fallback, read PlayerData bool/count if possible
+                        string pdField = Traverse.Create(invItem).Field<string>("playerDataBool").Value;
+                        if (!string.IsNullOrEmpty(pdField))
                         {
-                            if (!SpokenTextHistory.HasBeenSpoken(textMesh.text))
+                            var pd = PlayerData.instance;
+                            // Try bool first
+                            bool has = pd.GetBool(pdField);
+                            int count = pd.GetInt(pdField);
+                            string statement = has ? "obtenido" : (count > 0 ? count.ToString() : null);
+                            if (!string.IsNullOrEmpty(statement))
                             {
-                                Plugin.Logger.LogInfo($"[MenuSelectable (InvItemDisplay - fallback)] Speaking: {textMesh.text}");
-                                TolkScreenReader.Instance.Speak(textMesh.text, false);
+                                var nameGuess = __instance.gameObject.name;
+                                string msg = string.IsNullOrEmpty(nameGuess) ? statement : ($"{nameGuess}: {statement}");
+                                if (!SpokenTextHistory.HasBeenSpoken(msg))
+                                {
+                                    Plugin.Logger.LogInfo($"[MenuSelectable (InvItemDisplay fallback)] Speaking: {msg}");
+                                    TolkScreenReader.Instance.Speak(msg, false);
+                                }
                             }
                         }
                     }

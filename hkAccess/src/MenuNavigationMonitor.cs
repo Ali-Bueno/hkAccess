@@ -53,27 +53,12 @@ namespace HKAccessibility
 
             if (!string.IsNullOrEmpty(announcement))
             {
-                Plugin.Logger.LogInfo($"Announcing: {announcement}");
                 TolkScreenReader.Instance.Speak(announcement, true);
             }
         }
 
         private string GetFullUIDescription(GameObject uiObject)
         {
-            // Handle charm inventory navigation
-            Component invCharmBackboard = uiObject.GetComponent("InvCharmBackboard");
-            if (invCharmBackboard != null)
-            {
-                return BuildCharmInventoryDescription(invCharmBackboard);
-            }
-
-            // Handle item inventory navigation
-            Component invItemDisplay = uiObject.GetComponent("InvItemDisplay");
-            if (invItemDisplay != null)
-            {
-                return BuildItemInventoryDescription(invItemDisplay, uiObject);
-            }
-
             // Handle MenuOptionHorizontal (resolution, display mode, language, etc.)
             Component menuOptionHorizontal = null;
             Component[] allComponents = uiObject.GetComponents<Component>();
@@ -133,10 +118,7 @@ namespace HKAccessibility
             string text = GetUIElementText(uiObject);
 
             if (string.IsNullOrEmpty(text))
-            {
-                Plugin.Logger.LogInfo($"Empty text after filtering for object: {uiObject.name}");
                 return "";
-            }
 
             var button = uiObject.GetComponent<Button>();
             if (button != null)
@@ -315,106 +297,13 @@ namespace HKAccessibility
             foreach (string keyword in technicalKeywords)
             {
                 if (objectName.Contains(keyword))
-                {
-                    Plugin.Logger.LogInfo($"Filtered technical GameObject name: {objectName}");
                     return "";
-                }
             }
 
             if (objectName.EndsWith("Menu") || objectName.EndsWith("Screen"))
-            {
-                Plugin.Logger.LogInfo($"Filtered technical GameObject name (ends with Menu/Screen): {objectName}");
                 return "";
-            }
 
             return objectName;
-        }
-
-        private string BuildCharmInventoryDescription(Component invCharmBackboard)
-        {
-            try
-            {
-                Type type = invCharmBackboard.GetType();
-                FieldInfo charmNumField = type.GetField("charmNum", BindingFlags.Public | BindingFlags.Instance);
-
-                if (charmNumField == null)
-                    return "";
-
-                int charmNum = (int)charmNumField.GetValue(invCharmBackboard);
-                PlayerData pd = PlayerData.instance;
-
-                // Check if player has this charm
-                bool hasCharm = pd.GetBool($"gotCharm_{charmNum}");
-
-                if (!hasCharm)
-                {
-                    return "Encanto no obtenido";
-                }
-
-                // Get charm details
-                string charmName = Language.Language.Get($"CHARM_NAME_{charmNum}", "UI");
-                string charmDescription = Language.Language.Get($"CHARM_DESC_{charmNum}", "UI");
-                int notchesCost = pd.GetInt($"charmCost_{charmNum}");
-                bool isEquipped = pd.GetBool($"equippedCharm_{charmNum}");
-                bool isNew = pd.GetBool($"newCharm_{charmNum}");
-
-                // Get current notch status
-                int maxNotches = pd.GetInt("maxCharmNotches");
-                int notchesUsed = maxNotches - pd.GetInt("charmNotches");
-
-                // Build announcement
-                string statusText = isEquipped ? "Equipado" : "No equipado";
-                string newText = isNew ? " (Nuevo)" : "";
-
-                return $"{charmName}{newText}. {statusText}. Costo: {notchesCost} muesca{(notchesCost != 1 ? "s" : "")}. Muescas disponibles: {pd.GetInt("charmNotches")} de {maxNotches}. {charmDescription}";
-            }
-            catch (Exception ex)
-            {
-                Plugin.Logger.LogError($"Error in BuildCharmInventoryDescription: {ex}");
-                return "";
-            }
-        }
-
-        private string BuildItemInventoryDescription(Component invItemDisplay, GameObject uiObject)
-        {
-            try
-            {
-                Type type = invItemDisplay.GetType();
-                FieldInfo playerDataBoolField = type.GetField("playerDataBool", BindingFlags.Public | BindingFlags.Instance);
-
-                if (playerDataBoolField == null)
-                    return "";
-
-                string playerDataBool = (string)playerDataBoolField.GetValue(invItemDisplay);
-                bool hasItem = PlayerData.instance.GetBool(playerDataBool);
-
-                // Try to get a readable name from the GameObject hierarchy
-                string itemName = uiObject.name;
-                if (itemName.Contains("_"))
-                    itemName = itemName.Replace("_", " ");
-
-                // Try to get localized text if available
-                Text[] texts = uiObject.GetComponentsInChildren<Text>();
-                if (texts.Length > 0)
-                {
-                    foreach (var text in texts)
-                    {
-                        if (!string.IsNullOrEmpty(text.text))
-                        {
-                            itemName = text.text;
-                            break;
-                        }
-                    }
-                }
-
-                string status = hasItem ? "Obtenido" : "No obtenido";
-                return $"{itemName}. {status}";
-            }
-            catch (Exception ex)
-            {
-                Plugin.Logger.LogError($"Error in BuildItemInventoryDescription: {ex}");
-                return "";
-            }
         }
     }
 }

@@ -1,47 +1,86 @@
 using HarmonyLib;
+using System;
+using UnityEngine;
 
 namespace HKAccessibility.Patches
 {
     /// <summary>
-    /// Patches for inventory-related actions
-    /// Announces when charms are equipped/unequipped
+    /// Inventory-related patches: announce charms on selection and provide helpers.
     /// </summary>
-    [HarmonyPatch(typeof(PlayerData), "SetBool")]
-    public static class PlayerData_SetBool_Patch_Inventory
+    [HarmonyPatch]
+    public static class InventoryPatches
     {
-        private static void Postfix(string boolName, bool value)
+        [HarmonyPatch(typeof(InvCharmBackboard), nameof(InvCharmBackboard.SelectCharm))]
+        [HarmonyPostfix]
+        private static void InvCharmBackboard_SelectCharm_Postfix(InvCharmBackboard __instance)
         {
-            // Only handle charm equipment changes
-            if (!boolName.StartsWith("equippedCharm_"))
-                return;
-
             try
             {
-                string charmIdStr = boolName.Substring("equippedCharm_".Length);
-                int charmID = int.Parse(charmIdStr);
+                if (__instance == null) return;
 
-                string charmName = Language.Language.Get($"CHARM_NAME_{charmID}", "UI");
-                int notchesCost = PlayerData.instance.GetInt("charmCost_" + charmID);
-                int maxNotches = PlayerData.instance.GetInt("maxCharmNotches");
-                int notchesUsed = maxNotches - PlayerData.instance.GetInt("charmNotches");
+                int charmNum = __instance.charmNum;
+                if (charmNum <= 0) charmNum = __instance.GetCharmNum();
+                if (charmNum <= 0) return;
 
-                string textToSpeak;
-                if (value)
-                {
-                    textToSpeak = $"Equipado {charmName}. Muescas usadas: {notchesUsed} de {maxNotches}.";
-                }
-                else
-                {
-                    textToSpeak = $"Desequipado {charmName}. Muescas usadas: {notchesUsed} de {maxNotches}.";
-                }
-
-                Plugin.Logger.LogInfo($"[InventoryPatches] Speaking: {textToSpeak}");
-                TolkScreenReader.Instance.Speak(textToSpeak, false);
+                SpeakCharm(charmNum, __instance);
             }
-            catch (System.Exception ex)
+            catch (Exception ex)
             {
-                Plugin.Logger.LogError($"Error in PlayerData_SetBool_Patch_Inventory: {ex}");
+                Plugin.Logger.LogError($"[InventoryPatches] Error announcing charm: {ex}");
+            }
+        }
+
+        internal static void SpeakCharm(int charmNum, InvCharmBackboard source = null)
+        {
+            try
+            {
+                var pd = PlayerData.instance;
+
+                // Determine state from PlayerData if available
+                bool isEquipped = pd != null && pd.GetBool($"equippedCharm_{charmNum}");
+                bool hasCharm = pd != null && pd.GetBool($"gotCharm_{charmNum}");
+                int cost = pd != null ? pd.GetInt($"charmCost_{charmNum}") : 0;
+                bool isNew = false;
+                if (pd != null)
+                {
+                    // Some charms use newCharm_N
+                    var newField = $"newCharm_{charmNum}";
+                    isNew = pd.GetBool(newField);
+                }
+
+                // Resolve localized name/description
+                string nameKey1 = $"CHARM_NAME_{charmNum}";
+                string descKey1 = $"CHARM_DESC_{charmNum}";
+                string name = Language.Language.Has(nameKey1, "UI") ? Language.Language.Get(nameKey1, "UI") : Language.Language.Get(nameKey1);
+                string desc = Language.Language.Has(descKey1, "UI") ? Language.Language.Get(descKey1, "UI") : Language.Language.Get(descKey1);
+
+                if (string.IsNullOrEmpty(name) || name.StartsWith("#!#"))
+                {
+                    string altKey = $"CHARM_{charmNum}_NAME";
+                    name = Language.Language.Has(altKey, "UI") ? Language.Language.Get(altKey, "UI") : Language.Language.Get(altKey);
+                }
+
+                string announcement = string.Empty;
+                if (isNew) announcement += "Nuevo. ";
+                if (!string.IsNullOrEmpty(name)) announcement += name;
+                if (cost > 0) announcement += $". Costo: {cost} muescas";
+                if (!string.IsNullOrEmpty(desc)) announcement += $". {desc}";
+                if (hasCharm)
+                {
+                    announcement += isEquipped ? ". Actualmente equipado." : ". No equipado.";
+                }
+
+                if (!SpokenTextHistory.HasBeenSpoken(announcement))
+                {
+                    Plugin.Logger.LogInfo($"[Inventory] Charm {charmNum}: {announcement}");
+                    TolkScreenReader.Instance.Speak(announcement, false);
+                }
+            }
+            catch (Exception ex)
+            {
+                Plugin.Logger.LogError($"[InventoryPatches] Error in SpeakCharm: {ex}");
             }
         }
     }
 }
+
