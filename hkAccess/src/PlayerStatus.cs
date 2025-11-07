@@ -12,22 +12,14 @@ namespace HKAccessibility
         {
             try
             {
-                if (GameManager.instance != null)
+                if (GameManager.instance != null && GameManager.instance.gameState == GlobalEnums.GameState.PLAYING)
                 {
                     PlayerData playerData = GameManager.instance.playerData;
                     if (playerData != null)
                     {
-                        string status = $"Health: {playerData.health}/{playerData.maxHealth}, Soul: {playerData.MPCharge}/{playerData.maxMP}, Geo: {playerData.geo}";
+                        string status = $"Health: {playerData.health}/{playerData.maxHealth}, Soul: {playerData.MPCharge}/{playerData.maxMP}, Geo: {playerData.geo}, Nail Damage: {playerData.nailDamage}";
                         TolkScreenReader.Instance.Speak(status, false);
                     }
-                    else
-                    {
-                        TolkScreenReader.Instance.Speak("Player data not available", false);
-                    }
-                }
-                else
-                {
-                    TolkScreenReader.Instance.Speak("Game manager not found", false);
                 }
             }
             catch (Exception ex)

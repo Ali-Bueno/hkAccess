@@ -12,37 +12,44 @@ namespace HKAccessibility.Patches
         /// <summary>
         /// Patch to announce area names when entering new zones
         /// </summary>
-        [HarmonyPatch(typeof(AreaTitleController), "Play")]
-        public static class AreaTitleController_Play_Patch
-        {
-            private static void Postfix(AreaTitleController __instance)
-            {
-                try
-                {
-                    var areaEvent = Traverse.Create(__instance).Field<string>("areaEvent").Value;
-                    if (!string.IsNullOrEmpty(areaEvent))
-                    {
-                        string areaName = Language.Language.Get(areaEvent, "Map Zones");
-
-                        // If there's no localization, format it nicely
-                        if (areaName == areaEvent)
+                        [HarmonyPatch(typeof(AreaTitleController), "Play")]
+                        public static class AreaTitleController_Play_Patch
                         {
-                            areaName = areaEvent.Replace("_", " ").ToLower();
-                            // Uppercase the first letter of each word
-                            areaName = CultureInfo.CurrentCulture.TextInfo.ToTitleCase(areaName);
+                            private static void Postfix(AreaTitleController __instance)
+                            {
+                                try
+                                {
+                                    var areaEvent = Traverse.Create(__instance).Field<string>("areaEvent").Value;
+                                    if (string.IsNullOrEmpty(areaEvent))
+                                    {
+                                        return;
+                                    }
+                
+                                    // Specific fix for King's Pass key which is missing an underscore
+                                    if (areaEvent == "KINGSPASS")
+                                    {
+                                        areaEvent = "KING_PASS";
+                                    }
+                
+                                    string areaName = Language.Language.Get(areaEvent, "Map Zones");
+                
+                                    // If localization fails, format the key nicely as a fallback
+                                    if (areaName.StartsWith("#!#"))
+                                    {
+                                        Plugin.Logger.LogWarning($"[AreaTitleController] Localization failed for key '{areaEvent}'. Formatting fallback.");
+                                        areaName = areaEvent.Replace("_", " ").ToLower();
+                                        areaName = System.Globalization.CultureInfo.CurrentCulture.TextInfo.ToTitleCase(areaName);
+                                    }
+                
+                                    Plugin.Logger.LogInfo($"[AreaTitleController] Speaking: {areaName}");
+                                    TolkScreenReader.Instance.Speak(areaName, false);
+                                }
+                                catch (System.Exception ex)
+                                {
+                                    Plugin.Logger.LogError($"Error in AreaTitleController_Play_Patch: {ex}");
+                                }
+                            }
                         }
-
-                        Plugin.Logger.LogInfo($"[AreaTitleController] Speaking: {areaName}");
-                        TolkScreenReader.Instance.Speak(areaName, false);
-                    }
-                }
-                catch (System.Exception ex)
-                {
-                    Plugin.Logger.LogError($"Error in AreaTitleController_Play_Patch: {ex}");
-                }
-            }
-        }
-
         /// <summary>
         /// Patch to announce when the world map is opened
         /// </summary>

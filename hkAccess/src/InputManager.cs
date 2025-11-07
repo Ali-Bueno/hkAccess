@@ -13,8 +13,13 @@ namespace HKAccessibility
         /// </summary>
         public void HandleInput()
         {
+            if (Input.GetKeyDown(KeyCode.F1))
+            {
+                PlayerLocation.AnnounceLocation();
+            }
+
             // F9 - Announce player status
-            if (Input.GetKeyDown(KeyCode.F9))
+            if (Input.GetKeyDown(KeyCode.F9) || Input.GetKeyDown(KeyCode.H))
             {
                 PlayerStatus.AnnouncePlayerStatus();
             }
