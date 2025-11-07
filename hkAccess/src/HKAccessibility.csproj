@@ -13,8 +13,8 @@
       https://nuget.samboy.dev/v3/index.json
     </RestoreAdditionalProjectSources>
     <RootNamespace>HKAccessibility</RootNamespace>
-    <HollowKnightPluginsPath>D:\games\steam\steamapps\common\Hollow Knight\BepInEx\plugins</HollowKnightPluginsPath>
-    <HollowKnightRootPath>D:\games\steam\steamapps\common\Hollow Knight</HollowKnightRootPath>
+    <HollowKnightPluginsPath>../../../BepInEx/plugins</HollowKnightPluginsPath>
+    <HollowKnightRootPath>../../../</HollowKnightRootPath>
   </PropertyGroup>
 
   <ItemGroup>
@@ -25,39 +25,39 @@
 
   <ItemGroup>
     <Reference Include="Assembly-CSharp">
-      <HintPath>D:\games\steam\steamapps\common\Hollow Knight\hollow_knight_Data\Managed\Assembly-CSharp.dll</HintPath>
+      <HintPath>../../../hollow_knight_Data/Managed/Assembly-CSharp.dll</HintPath>
       <Private>false</Private>
     </Reference>
     <Reference Include="UnityEngine">
-      <HintPath>D:\games\steam\steamapps\common\Hollow Knight\hollow_knight_Data\Managed\UnityEngine.dll</HintPath>
+      <HintPath>../../../hollow_knight_Data/Managed/UnityEngine.dll</HintPath>
       <Private>false</Private>
     </Reference>
     <Reference Include="UnityEngine.CoreModule">
-      <HintPath>D:\games\steam\steamapps\common\Hollow Knight\hollow_knight_Data\Managed\UnityEngine.CoreModule.dll</HintPath>
+      <HintPath>../../../hollow_knight_Data/Managed/UnityEngine.CoreModule.dll</HintPath>
       <Private>false</Private>
     </Reference>
     <Reference Include="UnityEngine.InputLegacyModule">
-      <HintPath>D:\games\steam\steamapps\common\Hollow Knight\hollow_knight_Data\Managed\UnityEngine.InputLegacyModule.dll</HintPath>
+      <HintPath>../../../hollow_knight_Data/Managed/UnityEngine.InputLegacyModule.dll</HintPath>
       <Private>false</Private>
     </Reference>
     <Reference Include="UnityEngine.UI">
-      <HintPath>D:\games\steam\steamapps\common\Hollow Knight\hollow_knight_Data\Managed\UnityEngine.UI.dll</HintPath>
+      <HintPath>../../../hollow_knight_Data/Managed/UnityEngine.UI.dll</HintPath>
       <Private>false</Private>
     </Reference>
     <Reference Include="UnityEngine.UIModule">
-      <HintPath>D:\games\steam\steamapps\common\Hollow Knight\hollow_knight_Data\Managed\UnityEngine.UIModule.dll</HintPath>
+      <HintPath>../../../hollow_knight_Data/Managed/UnityEngine.UIModule.dll</HintPath>
       <Private>false</Private>
     </Reference>
     <Reference Include="PlayMaker">
-      <HintPath>D:\games\steam\steamapps\common\Hollow Knight\hollow_knight_Data\Managed\PlayMaker.dll</HintPath>
+      <HintPath>../../../hollow_knight_Data/Managed/PlayMaker.dll</HintPath>
       <Private>false</Private>
     </Reference>
     <Reference Include="UnityEngine.AnimationModule">
-      <HintPath>D:\games\steam\steamapps\common\Hollow Knight\hollow_knight_Data\Managed\UnityEngine.AnimationModule.dll</HintPath>
+      <HintPath>../../../hollow_knight_Data/Managed/UnityEngine.AnimationModule.dll</HintPath>
       <Private>false</Private>
     </Reference>
     <Reference Include="UnityEngine.Physics2DModule">
-      <HintPath>D:\games\steam\steamapps\common\Hollow Knight\hollow_knight_Data\Managed\UnityEngine.Physics2DModule.dll</HintPath>
+      <HintPath>../../../hollow_knight_Data/Managed/UnityEngine.Physics2DModule.dll</HintPath>
       <Private>false</Private>
     </Reference>
   </ItemGroup>
@@ -71,4 +71,5 @@
     <Copy SourceFiles="$(TargetPath)" DestinationFolder="$(HollowKnightPluginsPath)" />
     <Message Text="Plugin copied successfully to $(HollowKnightPluginsPath)" Importance="high" />
   </Target>
+
 </Project>
