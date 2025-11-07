@@ -30,6 +30,10 @@ namespace HKAccessibility
                 "MOD_UNLOADED" => "Hollow Knight Accessibility Mod unloaded",
                 "INVENTORY_OPENED" => "Inventory opened",
                 "PLAYER_LOCATION" => "Coordinates: X {1:F0}, Y {2:F0}, Location: {0}",
+                "ACHIEVEMENT_UNLOCKED" => "Unlocked",
+                "ACHIEVEMENT_LOCKED" => "Locked",
+                "HIDDEN_ACHIEVEMENT_TITLE" => "Hidden Achievement",
+                "HIDDEN_ACHIEVEMENT" => "The details of this achievement are secret.",
                 _ => key // If not found, return the key itself
             };
         }

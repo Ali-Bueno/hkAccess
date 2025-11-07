@@ -16,6 +16,25 @@ namespace HKAccessibility.Patches
     {
         private static void Postfix(BaseEventData eventData, MenuSelectable __instance)
         {
+            // High-priority check for pre-formatted accessibility info
+            try
+            {
+                var accessibilityInfo = __instance.GetComponentInParent<AccessibilityInfo>();
+                if (accessibilityInfo != null && !string.IsNullOrEmpty(accessibilityInfo.fullDescription))
+                {
+                    if (!SpokenTextHistory.HasBeenSpoken(accessibilityInfo.fullDescription))
+                    {
+                        Plugin.Logger.LogInfo($"[MenuSelectable (AccessibilityInfo)] Speaking: {accessibilityInfo.fullDescription}");
+                        TolkScreenReader.Instance.Speak(accessibilityInfo.fullDescription, true);
+                    }
+                    return;
+                }
+            }
+            catch (System.Exception ex)
+            {
+                Plugin.Logger.LogError($"Error in MenuSelectable_OnSelect (AccessibilityInfo): {ex}");
+            }
+
             // Handle Charms via InvCharmBackboard in hierarchy (reliable in inventory)
             try
             {
