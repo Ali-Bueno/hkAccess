@@ -606,15 +606,15 @@ namespace HKAccessibility
                     int notchCost = PlayerData.instance.GetInt(notchCostVar);
                     if (notchCost > 0)
                     {
-                        string notchWord = notchCost > 1 ? ModLocalization.Get("NOTCH_PLURAL") : ModLocalization.Get("NOTCH_SINGULAR");
-                        announcement += $". {ModLocalization.Get("COST")}: {notchCost} {notchWord}";
+                        string notchWord = notchCost > 1 ? "notches" : "notch";
+                        announcement += $". Cost: {notchCost} {notchWord}";
                     }
 
                     // Check if equipped
                     bool isEquipped = PlayerData.instance.GetBool($"equippedCharm_{charmNum}");
                     if (isEquipped)
                     {
-                        announcement += $". {ModLocalization.Get("EQUIPPED")}";
+                        announcement += $". Equipped";
                     }
                 }
 
@@ -624,7 +624,7 @@ namespace HKAccessibility
             catch (System.Exception ex)
             {
                 Plugin.Logger.LogError($"[InventoryReader] Error announcing charm: {ex}");
-                TolkScreenReader.Instance.Speak($"{ModLocalization.Get("CHARM")} {charmNum}", true);
+                TolkScreenReader.Instance.Speak($"Charm {charmNum}", true);
             }
         }
     }

@@ -144,11 +144,11 @@ namespace HKAccessibility.Patches
             switch (saveFileState)
             {
                 case UnityEngine.UI.SaveSlotButton.SaveFileStates.Empty:
-                    TolkScreenReader.Instance.Speak($"{ModLocalization.Get("SLOT")} {slotNumber}. {ModLocalization.Get("NEW_GAME")}", true);
+                    TolkScreenReader.Instance.Speak($"Slot {slotNumber}. New game", true);
                     break;
 
                 case UnityEngine.UI.SaveSlotButton.SaveFileStates.Corrupted:
-                    TolkScreenReader.Instance.Speak($"{ModLocalization.Get("SLOT")} {slotNumber}. {ModLocalization.Get("CORRUPTED_FILE")}", true);
+                    TolkScreenReader.Instance.Speak($"Slot {slotNumber}. Corrupted file", true);
                     break;
 
                 case UnityEngine.UI.SaveSlotButton.SaveFileStates.LoadedStats:
@@ -165,29 +165,29 @@ namespace HKAccessibility.Patches
                         else
                         {
                             Plugin.Logger.LogWarning("SaveStats is null");
-                            TolkScreenReader.Instance.Speak($"{ModLocalization.Get("SLOT")} {slotNumber}", true);
+                            TolkScreenReader.Instance.Speak($"Slot {slotNumber}", true);
                         }
                     }
                     else
                     {
                         Plugin.Logger.LogWarning("saveStats field not found");
-                        TolkScreenReader.Instance.Speak($"{ModLocalization.Get("SLOT")} {slotNumber}", true);
+                        TolkScreenReader.Instance.Speak($"Slot {slotNumber}", true);
                     }
                     break;
 
                 case UnityEngine.UI.SaveSlotButton.SaveFileStates.OperationInProgress:
-                    TolkScreenReader.Instance.Speak($"{ModLocalization.Get("SLOT")} {slotNumber}. {ModLocalization.Get("LOADING")}", true);
+                    TolkScreenReader.Instance.Speak($"Slot {slotNumber}. Loading", true);
                     break;
 
                 default:
-                    TolkScreenReader.Instance.Speak($"{ModLocalization.Get("SLOT")} {slotNumber}", true);
+                    TolkScreenReader.Instance.Speak($"Slot {slotNumber}", true);
                     break;
             }
         }
 
         private static void AnnounceSaveSlotWithStats(UnityEngine.UI.SaveSlotButton saveSlotButton, SaveStats saveStats, int slotNumber)
         {
-            string announcement = $"Slot {slotNumber}. Partida guardada";
+            string announcement = $"Slot {slotNumber}";
 
             if (saveSlotButton.locationText != null && !string.IsNullOrEmpty(saveSlotButton.locationText.text))
             {
@@ -197,7 +197,7 @@ namespace HKAccessibility.Patches
 
             if (saveSlotButton.completionText != null && !string.IsNullOrEmpty(saveSlotButton.completionText.text))
             {
-                announcement += $". {saveSlotButton.completionText.text} completado";
+                announcement += $". {saveSlotButton.completionText.text}";
             }
 
             if (saveSlotButton.playTimeText != null && !string.IsNullOrEmpty(saveSlotButton.playTimeText.text))
@@ -212,62 +212,19 @@ namespace HKAccessibility.Patches
 
             if (saveStats.permadeathMode == 1)
             {
-                announcement += ". Modo Steel Soul";
+                announcement += ". Steel Soul";
             }
             else if (saveStats.permadeathMode == 2)
             {
-                announcement = $"Slot {slotNumber}. Steel Soul derrotado";
+                announcement = $"Slot {slotNumber}. Steel Soul defeated";
             }
 
             Plugin.Logger.LogInfo($">>> Announcing: {announcement}");
             TolkScreenReader.Instance.Speak(announcement, true);
         }
 
-        // Patch to announce when entering a menu
-        [HarmonyPatch(typeof(UIManager), "ShowMenu")]
-        [HarmonyPrefix]
-        public static void OnShowMenu(MenuScreen menu)
-        {
-            try
-            {
-                if (menu == null || menu.gameObject == null)
-                    return;
-
-                string menuName = menu.gameObject.name;
-
-                // Skip prompts - handled by specific patches
-                if (menuName.Contains("Prompt"))
-                {
-                    Plugin.Logger.LogInfo($"Skipping prompt announcement (handled by specific patch): {menuName}");
-                    return;
-                }
-
-                // Convert technical names to friendly names
-                string friendlyName = menuName switch
-                {
-                    "OptionsMenuScreen" => "Opciones",
-                    "AudioMenuScreen" => "Audio",
-                    "VideoMenuScreen" => "Vídeo",
-                    "GamepadMenuScreen" => "Mando",
-                    "KeyboardMenuScreen" => "Teclado",
-                    "GameOptionsMenuScreen" => "Opciones de juego",
-                    "PauseMenuScreen" => "Pausa",
-                    "AchievementsMenuScreen" => "Logros",
-                    "ExtrasMenuScreen" => "Extras",
-                    "OverscanMenuScreen" => "Ajuste de pantalla",
-                    "BrightnessMenuScreen" => "Brillo",
-                    "RemapGamepadMenuScreen" => "Reasignar controles de mando",
-                    _ => menuName.Replace("MenuScreen", "").Replace("Screen", "")
-                };
-
-                Plugin.Logger.LogInfo($">>> Announcing menu: {friendlyName}");
-                TolkScreenReader.Instance.Speak(friendlyName, true);
-            }
-            catch (System.Exception ex)
-            {
-                Plugin.Logger.LogError($"Error announcing menu: {ex}");
-            }
-        }
+        // Menu titles are announced by SceneTitlePatches.cs which reads them from the UI
+        // (No need to hardcode menu names here)
 
         // Patch to announce when game is being saved
         [HarmonyPatch(typeof(GameManager), "SaveGame", new System.Type[] { typeof(System.Action<bool>) })]
@@ -277,7 +234,7 @@ namespace HKAccessibility.Patches
             try
             {
                 Plugin.Logger.LogInfo(">>> Game save triggered");
-                TolkScreenReader.Instance.Speak(ModLocalization.Get("SAVING_GAME"), false);
+                TolkScreenReader.Instance.Speak("Saving", false);
             }
             catch (System.Exception ex)
             {
@@ -304,7 +261,7 @@ namespace HKAccessibility.Patches
         private static IEnumerator AnnounceSaveComplete()
         {
             yield return new WaitForSecondsRealtime(0.3f);
-            TolkScreenReader.Instance.Speak(ModLocalization.Get("GAME_SAVED"), false);
+            TolkScreenReader.Instance.Speak("Saved", false);
         }
     }
 }

@@ -485,6 +485,23 @@ git push -u origin main
   - Works automatically in all supported game languages
 - **Result:** Item names and quantities now announce correctly in English, Spanish, Portuguese, Italian, French, and German without code changes
 
+### ✅ Mod Localization Strategy
+**Problem:** Initial approach used hardcoded translations in 10 languages within ModLocalization.cs (~400 lines), which caused game control blocking when accessing Language.Language.CurrentLanguage() during mod initialization. Hardcoded menu names ("Opciones", "Partida guardada") didn't respect game language changes.
+**Implemented Solution:**
+- **Simplified ModLocalization.cs:** Reduced to 37 lines with only 3 universal English messages for mod-specific features:
+  - "Hollow Knight Accessibility Mod loaded"
+  - "Hollow Knight Accessibility Mod unloaded"
+  - "Inventory opened"
+- **No Language Detection During Init:** Completely removed all Language.Language access during mod startup to prevent input system blocking
+- **Read Game UI Directly:** Menu titles, save slot information, and game terms are read directly from the game's localized UI
+  - `SceneTitlePatches.cs` reads menu titles from visible Text components (automatically localized by game)
+  - Save slot info uses game's own locationText, completionText, playTimeText (already localized)
+  - Charm names/descriptions use Language.Language.Get() with proper keys after game is loaded
+- **No Hardcoded Translations:** Eliminated all hardcoded Spanish/Portuguese translations
+  - Menu names now adapt automatically when user changes game language
+  - Works in all 10 game languages without code changes
+- **Result:** Controls work correctly, menu titles display in user's selected language, mod messages use simple universal English
+
 ## 🚧 Known Issues (In Progress)
 
 *No known issues at this time.*

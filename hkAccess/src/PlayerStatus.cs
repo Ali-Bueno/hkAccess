@@ -17,23 +17,23 @@ namespace HKAccessibility
                     PlayerData playerData = GameManager.instance.playerData;
                     if (playerData != null)
                     {
-                        string status = $"{ModLocalization.Get("HEALTH")}: {playerData.health}/{playerData.maxHealth}, {ModLocalization.Get("SOUL")}: {playerData.MPCharge}/{playerData.maxMP}, {ModLocalization.Get("GEO")}: {playerData.geo}";
+                        string status = $"Health: {playerData.health}/{playerData.maxHealth}, Soul: {playerData.MPCharge}/{playerData.maxMP}, Geo: {playerData.geo}";
                         TolkScreenReader.Instance.Speak(status, false);
                     }
                     else
                     {
-                        TolkScreenReader.Instance.Speak(ModLocalization.Get("PLAYER_DATA_NOT_AVAILABLE"), false);
+                        TolkScreenReader.Instance.Speak("Player data not available", false);
                     }
                 }
                 else
                 {
-                    TolkScreenReader.Instance.Speak(ModLocalization.Get("GAME_MANAGER_NOT_FOUND"), false);
+                    TolkScreenReader.Instance.Speak("Game manager not found", false);
                 }
             }
             catch (Exception ex)
             {
                 Plugin.Logger.LogError($"Error getting player status: {ex}");
-                TolkScreenReader.Instance.Speak(ModLocalization.Get("ERROR_GETTING_PLAYER_STATUS"), false);
+                TolkScreenReader.Instance.Speak("Error getting player status", false);
             }
         }
     }

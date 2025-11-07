@@ -17,6 +17,7 @@ namespace HKAccessibility
         private GameObject lastSelectedObject;
         private float announceDelay = 0.1f;
         private float lastAnnounceTime;
+        private static bool localizationInitialized = false;
 
         private void Update()
         {
@@ -33,6 +34,13 @@ namespace HKAccessibility
         private void CheckMenuNavigation()
         {
             GameObject currentSelected = EventSystem.current?.currentSelectedGameObject;
+
+            // Initialize localization on first menu navigation (game is fully loaded by now)
+            if (!localizationInitialized && currentSelected != null)
+            {
+                ModLocalization.Initialize();
+                localizationInitialized = true;
+            }
 
             if (currentSelected != null && currentSelected != lastSelectedObject)
             {
@@ -231,7 +239,7 @@ namespace HKAccessibility
             }
 
             if (string.IsNullOrEmpty(stateText))
-                stateText = toggle.isOn ? ModLocalization.Get("ENABLED") : ModLocalization.Get("DISABLED");
+                stateText = toggle.isOn ? "on" : "off";
 
             if (!string.IsNullOrEmpty(labelText))
                 return $"{labelText}: {stateText}";
