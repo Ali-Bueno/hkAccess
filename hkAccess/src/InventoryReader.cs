@@ -47,7 +47,7 @@ namespace HKAccessibility
                 if (inventoryOpen && !wasOpen)
                 {
                     Plugin.Logger.LogInfo("[InventoryReader] Inventory opened");
-                    TolkScreenReader.Instance.Speak("Inventario abierto", true);
+                    TolkScreenReader.Instance.Speak(ModLocalization.Get("INVENTORY_OPENED"), true);
                     didInitialInventorySnapshot = false;
                     announcedInventoryTexts.Clear();
                     lastVisibleTextById.Clear();
@@ -606,14 +606,15 @@ namespace HKAccessibility
                     int notchCost = PlayerData.instance.GetInt(notchCostVar);
                     if (notchCost > 0)
                     {
-                        announcement += $". Costo: {notchCost} muesca{(notchCost > 1 ? "s" : "")}";
+                        string notchWord = notchCost > 1 ? ModLocalization.Get("NOTCH_PLURAL") : ModLocalization.Get("NOTCH_SINGULAR");
+                        announcement += $". {ModLocalization.Get("COST")}: {notchCost} {notchWord}";
                     }
 
                     // Check if equipped
                     bool isEquipped = PlayerData.instance.GetBool($"equippedCharm_{charmNum}");
                     if (isEquipped)
                     {
-                        announcement += ". Equipado";
+                        announcement += $". {ModLocalization.Get("EQUIPPED")}";
                     }
                 }
 
@@ -623,7 +624,7 @@ namespace HKAccessibility
             catch (System.Exception ex)
             {
                 Plugin.Logger.LogError($"[InventoryReader] Error announcing charm: {ex}");
-                TolkScreenReader.Instance.Speak($"Amuleto {charmNum}", true);
+                TolkScreenReader.Instance.Speak($"{ModLocalization.Get("CHARM")} {charmNum}", true);
             }
         }
     }

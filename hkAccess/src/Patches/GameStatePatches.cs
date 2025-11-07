@@ -144,11 +144,11 @@ namespace HKAccessibility.Patches
             switch (saveFileState)
             {
                 case UnityEngine.UI.SaveSlotButton.SaveFileStates.Empty:
-                    TolkScreenReader.Instance.Speak($"Slot {slotNumber}. Nuevo juego", true);
+                    TolkScreenReader.Instance.Speak($"{ModLocalization.Get("SLOT")} {slotNumber}. {ModLocalization.Get("NEW_GAME")}", true);
                     break;
 
                 case UnityEngine.UI.SaveSlotButton.SaveFileStates.Corrupted:
-                    TolkScreenReader.Instance.Speak($"Slot {slotNumber}. Archivo corrupto", true);
+                    TolkScreenReader.Instance.Speak($"{ModLocalization.Get("SLOT")} {slotNumber}. {ModLocalization.Get("CORRUPTED_FILE")}", true);
                     break;
 
                 case UnityEngine.UI.SaveSlotButton.SaveFileStates.LoadedStats:
@@ -165,22 +165,22 @@ namespace HKAccessibility.Patches
                         else
                         {
                             Plugin.Logger.LogWarning("SaveStats is null");
-                            TolkScreenReader.Instance.Speak($"Slot {slotNumber}", true);
+                            TolkScreenReader.Instance.Speak($"{ModLocalization.Get("SLOT")} {slotNumber}", true);
                         }
                     }
                     else
                     {
                         Plugin.Logger.LogWarning("saveStats field not found");
-                        TolkScreenReader.Instance.Speak($"Slot {slotNumber}", true);
+                        TolkScreenReader.Instance.Speak($"{ModLocalization.Get("SLOT")} {slotNumber}", true);
                     }
                     break;
 
                 case UnityEngine.UI.SaveSlotButton.SaveFileStates.OperationInProgress:
-                    TolkScreenReader.Instance.Speak($"Slot {slotNumber}. Cargando", true);
+                    TolkScreenReader.Instance.Speak($"{ModLocalization.Get("SLOT")} {slotNumber}. {ModLocalization.Get("LOADING")}", true);
                     break;
 
                 default:
-                    TolkScreenReader.Instance.Speak($"Slot {slotNumber}", true);
+                    TolkScreenReader.Instance.Speak($"{ModLocalization.Get("SLOT")} {slotNumber}", true);
                     break;
             }
         }
@@ -277,7 +277,7 @@ namespace HKAccessibility.Patches
             try
             {
                 Plugin.Logger.LogInfo(">>> Game save triggered");
-                TolkScreenReader.Instance.Speak("Guardando juego", false);
+                TolkScreenReader.Instance.Speak(ModLocalization.Get("SAVING_GAME"), false);
             }
             catch (System.Exception ex)
             {
@@ -304,7 +304,7 @@ namespace HKAccessibility.Patches
         private static IEnumerator AnnounceSaveComplete()
         {
             yield return new WaitForSecondsRealtime(0.3f);
-            TolkScreenReader.Instance.Speak("Juego guardado", false);
+            TolkScreenReader.Instance.Speak(ModLocalization.Get("GAME_SAVED"), false);
         }
     }
 }

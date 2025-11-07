@@ -231,7 +231,7 @@ namespace HKAccessibility
             }
 
             if (string.IsNullOrEmpty(stateText))
-                stateText = toggle.isOn ? "activado" : "desactivado";
+                stateText = toggle.isOn ? ModLocalization.Get("ENABLED") : ModLocalization.Get("DISABLED");
 
             if (!string.IsNullOrEmpty(labelText))
                 return $"{labelText}: {stateText}";

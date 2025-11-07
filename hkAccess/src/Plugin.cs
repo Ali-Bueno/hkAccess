@@ -44,7 +44,7 @@ public class Plugin : BaseUnityPlugin
                 if (TolkScreenReader.Instance.HasSpeech())
                 {
                     Logger.LogInfo("Speech output available");
-                    TolkScreenReader.Instance.Speak("Hollow Knight Accessibility Mod loaded successfully", false);
+                    TolkScreenReader.Instance.Speak(ModLocalization.Get("MOD_LOADED"), false);
                 }
 
                 if (TolkScreenReader.Instance.HasBraille())
@@ -132,7 +132,7 @@ public class Plugin : BaseUnityPlugin
 
         try
         {
-            TolkScreenReader.Instance.Speak("Hollow Knight Accessibility Mod unloaded", false);
+            TolkScreenReader.Instance.Speak(ModLocalization.Get("MOD_UNLOADED"), false);
             TolkScreenReader.Instance.Cleanup();
             Logger.LogInfo("Screen reader support unloaded.");
         }
