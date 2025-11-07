@@ -1,0 +1,13 @@
+<Project>
+  <PropertyGroup>
+    <!--
+      INSTRUCTIONS:
+      1. Copy this file and rename it to "HollowKnight.props" (remove .example)
+      2. Update the HollowKnightRootPath below to match your Hollow Knight installation
+      3. The build will automatically use this path
+
+      NOTE: This file (HollowKnight.props) is in .gitignore and won't be committed
+    -->
+    <HollowKnightRootPath>D:\games\steam\steamapps\common\Hollow Knight</HollowKnightRootPath>
+  </PropertyGroup>
+</Project>

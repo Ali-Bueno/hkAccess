@@ -67,3 +67,6 @@ Desktop.ini
 # Temporary files
 *.tmp
 *.temp
+
+# Local build configuration (user-specific Hollow Knight installation path)
+**/HollowKnight.props

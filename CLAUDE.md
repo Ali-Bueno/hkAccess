@@ -371,6 +371,21 @@ hkAccess/
 - Tolk.dll and nvdaControllerClient64.dll in game root
 - Visual Studio or VS Code with C# support
 
+### Initial Setup
+**Configure Hollow Knight Installation Path:**
+
+The project uses a local configuration file to locate your Hollow Knight installation. This allows the project to work in any environment without hardcoded paths.
+
+1. Navigate to `hkAccess/src/`
+2. Copy `HollowKnight.props.example` to `HollowKnight.props`
+3. Edit `HollowKnight.props` and update the path to match your installation:
+   ```xml
+   <HollowKnightRootPath>C:\Your\Path\To\Hollow Knight</HollowKnightRootPath>
+   ```
+4. The `HollowKnight.props` file is git-ignored and won't be committed
+
+**Note:** If the file doesn't exist, the build will fall back to a relative path (assumes project is 3 levels deep in the game directory).
+
 ### Building
 ```bash
 cd hkAccess/src
@@ -397,7 +412,10 @@ git push -u origin main
 - Decompiled game code in `hk code/` is excluded from builds via .csproj
 - **Game code is in .gitignore but fully accessible:** The `hk code/` directory is excluded from version control but Claude Code can freely read and analyze all files for implementation guidance
 - Tolk DLLs must be in game root directory (not plugins folder)
-- Unity DLL references point to local Hollow Knight installation
+- **Unity DLL references:** Configured via `HollowKnight.props` file (local, git-ignored)
+  - Each developer can have their own installation path
+  - Use `HollowKnight.props.example` as a template
+  - Falls back to relative paths if config file doesn't exist
 - Screen reader must be running before launching game
 
 ## 🐛 Previously Known Issues (Now Fixed)
