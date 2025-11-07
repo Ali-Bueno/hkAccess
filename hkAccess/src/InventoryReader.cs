@@ -364,16 +364,26 @@ namespace HKAccessibility
                 }
 
                 string combined = null;
-                // Try quantities for known items
+
+                // Look for quantity displayed near the item name
+                // The game uses DisplayItemAmount components that show quantities as separate text elements
                 string quantity = null;
-                if (!string.IsNullOrEmpty(name) && PlayerData.instance != null)
+                if (!string.IsNullOrEmpty(name))
                 {
-                    var pd = PlayerData.instance;
-                    string lowName = name.ToLowerInvariant();
-                    if (lowName == "geo") quantity = pd.geo.ToString();
-                    else if (lowName == "llave simple" || lowName == "llaves simples") quantity = pd.simpleKeys.ToString();
-                    else if (lowName == "mineral pálido" || lowName == "mineral palido") quantity = pd.ore.ToString();
-                    else if (lowName == "huevo rancio" || lowName == "huevos rancios") quantity = pd.rancidEggs.ToString();
+                    // Search for a numeric text near the name (usually to the right or below)
+                    foreach (var entry in texts)
+                    {
+                        if (int.TryParse(entry.s, out int qty))
+                        {
+                            // Check if this number is close to the name (within reasonable distance)
+                            float distance = Mathf.Abs(entry.y - (texts.Find(t => t.s == name).y));
+                            if (distance < 1.5f) // Close enough vertically
+                            {
+                                quantity = qty.ToString();
+                                break;
+                            }
+                        }
+                    }
                 }
 
                 string nameWithQty = name;
@@ -433,10 +443,38 @@ namespace HKAccessibility
             string t = raw.Replace("\n", " ").Replace("\r", " ").Trim();
             while (t.Contains("  ")) t = t.Replace("  ", " ");
             if (t.Length < 2) return string.Empty;
-            // Filter controller/connect prompts
+
+            // Filter controller/connect prompts and button instructions
             string low = t.ToLowerInvariant();
-            if (low.Contains("conecta") || low.Contains("connect") || low.Contains("controlador")) return string.Empty;
-            if (low.StartsWith("presiona") || low.StartsWith("pulsa") || low.StartsWith("mantén") || low.StartsWith("mantenga") || low.StartsWith("press ") || low.StartsWith("hold ")) return string.Empty;
+
+            // Connection prompts
+            if (low.Contains("conecta") || low.Contains("connect") || low.Contains("controlador") || low.Contains("controller"))
+                return string.Empty;
+
+            // Button press instructions (all languages)
+            // English
+            if (low.StartsWith("press") || low.StartsWith("hold") || low.StartsWith("tap"))
+                return string.Empty;
+            // Spanish
+            if (low.StartsWith("presiona") || low.StartsWith("pulsa") || low.StartsWith("mantén") || low.StartsWith("mantenga") || low.StartsWith("manten"))
+                return string.Empty;
+            // Portuguese
+            if (low.StartsWith("pressione") || low.StartsWith("segure") || low.StartsWith("mantenha"))
+                return string.Empty;
+            // Italian
+            if (low.StartsWith("premi") || low.StartsWith("tieni") || low.StartsWith("mantieni"))
+                return string.Empty;
+            // French
+            if (low.StartsWith("appuyer") || low.StartsWith("appuyez") || low.StartsWith("maintenir") || low.StartsWith("maintenez"))
+                return string.Empty;
+            // German
+            if (low.StartsWith("drücken") || low.StartsWith("drucken") || low.StartsWith("halten"))
+                return string.Empty;
+
+            // Single word button prompts that might appear
+            if (low == "press" || low == "hold" || low == "presiona" || low == "pressione" || low == "premi")
+                return string.Empty;
+
             return t;
         }
 

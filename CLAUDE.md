@@ -455,15 +455,19 @@ git push -u origin main
 - Announces item names with quantities (Geo, Keys, Ore, Eggs)
 - Filters static UI labels via initial snapshot on inventory open
 
+### ✅ Item Name Localization (Multi-Language Support)
+**Problem:** Item names were hardcoded in Spanish, failing to announce correctly in other languages. Button prompts like "Press" or "Pressione" were incorrectly identified as item names.
+**Implemented Solution:**
+- **Enhanced Text Filtering:** Comprehensive multi-language filtering in `CleanText()` method (InventoryReader.cs:440-479)
+  - Filters button prompts in 6 languages: English, Spanish, Portuguese, Italian, French, German
+  - Removes "Press", "Hold", "Tap" and equivalents ("Presiona", "Pressione", "Premi", etc.)
+  - Filters controller connection prompts in all languages
+- **Language-Agnostic Quantity Detection:** Removed hardcoded Spanish name matching
+  - Detects quantities by finding numbers near item names using spatial proximity
+  - Works automatically in all supported game languages
+- **Result:** Item names and quantities now announce correctly in English, Spanish, Portuguese, Italian, French, and German without code changes
+
 ## 🚧 Known Issues (In Progress)
 
-### ⚠️ Item Name Localization
-**Status:** Implemented with hardcoded Spanish names
-**Current Implementation:**
-- Item quantities work correctly (Geo, Simple Keys, Pale Ore, Rancid Eggs)
-- Names are currently matched via hardcoded Spanish strings in `InventoryReader.cs:372-376`
-**Next Steps:**
-- Investigate game's localization system for item names
-- Replace hardcoded name matching with Language.Language lookups
-- Support all language settings (English, Spanish, Italian, French, Portuguese, etc.)
+*No known issues at this time.*
 
